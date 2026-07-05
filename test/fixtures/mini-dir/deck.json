@@ -1,0 +1,68 @@
+{
+  "format_version": 1,
+  "id": "mini",
+  "name": "Mini fixture deck",
+  "description": "Four cards: two plain text, one SVG image, one hinted.",
+  "settings": {
+    "base_timer_ms": 5000,
+    "new_cards_per_session": 5
+  },
+  "cards": [
+    {
+      "id": "ka",
+      "prompt": {
+        "type": "text",
+        "text": "か"
+      },
+      "answers": [
+        "ka"
+      ],
+      "tags": [
+        "hiragana",
+        "k-row"
+      ]
+    },
+    {
+      "id": "shi",
+      "prompt": {
+        "type": "text",
+        "text": "し"
+      },
+      "answers": [
+        "shi",
+        "si"
+      ],
+      "tags": [
+        "hiragana",
+        "s-row"
+      ]
+    },
+    {
+      "id": "dot",
+      "prompt": {
+        "type": "image",
+        "media": "media/dot.svg"
+      },
+      "answers": [
+        "dot"
+      ],
+      "tags": [
+        "image"
+      ]
+    },
+    {
+      "id": "n",
+      "prompt": {
+        "type": "text",
+        "text": "ん"
+      },
+      "answers": [
+        "n"
+      ],
+      "hint": "the only lone consonant",
+      "tags": [
+        "hiragana"
+      ]
+    }
+  ]
+}
