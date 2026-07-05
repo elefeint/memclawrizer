@@ -1,10 +1,47 @@
 :root {
   color-scheme: light dark;
   font-family: system-ui, sans-serif;
+
+  --bg: light-dark(#faf6ef, #17151c);
+  --fg: light-dark(#2b2733, #e8e4dc);
+  --muted: light-dark(#6f6a78, #9a95a3);
+  --accent: light-dark(#b3402e, #e06a50);
+  --cabinet: light-dark(#efe6d6, #201c26);
+  --cabinet-edge: light-dark(#d8cab2, #322c3d);
+  --pit-bg: light-dark(#e3d7c2, #131019);
+  --glass: light-dark(rgba(90, 70, 40, 0.08), rgba(200, 210, 255, 0.06));
+  --rail: light-dark(#a99e8c, #4d4658);
+  --steel: light-dark(#8b8394, #b8b2c4);
+  --jar-line: light-dark(rgba(60, 50, 70, 0.45), rgba(220, 215, 230, 0.4));
+  --good: light-dark(#2e7d43, #6fca8b);
+}
+
+* {
+  box-sizing: border-box;
 }
 
 body {
-  margin: 2rem;
+  margin: 0;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#app {
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: color-mix(in srgb, currentColor 8%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+  border-radius: 8px;
+  padding: 0.35rem 0.9rem;
+  cursor: pointer;
+}
+
+button:hover {
+  background: color-mix(in srgb, currentColor 15%, transparent);
 }
 
 .badge {
@@ -13,4 +50,364 @@ body {
   border-radius: 0.5rem;
   background: color-mix(in srgb, currentColor 12%, transparent);
   font-size: 0.85rem;
+}
+
+.error-banner {
+  position: fixed;
+  left: 1rem;
+  right: 1rem;
+  bottom: 1rem;
+  z-index: 999;
+  padding: 0.8rem 1rem;
+  border: 2px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--accent);
+  white-space: pre-wrap;
+  overflow-x: auto;
+  max-height: 40vh;
+}
+
+/* ------------------------------------------------------------- home ----- */
+
+.home {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.home h1 {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  letter-spacing: 0.06em;
+}
+
+.deck-list {
+  list-style: none;
+  margin: 0 0 1.5rem;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.deck-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.8rem 1rem;
+  border: 1px solid var(--cabinet-edge);
+  border-radius: 10px;
+  background: var(--cabinet);
+}
+
+.deck-name {
+  font-weight: 600;
+  flex: 1;
+}
+
+.deck-counts {
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+/* ------------------------------------------------------------ drill ----- */
+
+.drill {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+  background:
+    radial-gradient(ellipse at 50% -20%, color-mix(in srgb, var(--accent) 10%, transparent), transparent 60%),
+    var(--cabinet);
+}
+
+.rail-wrap {
+  flex: 0 0 96px;
+  position: relative;
+  border-bottom: 2px solid var(--cabinet-edge);
+}
+
+.rail {
+  position: absolute;
+  top: 14px;
+  left: 24px;
+  right: 24px;
+  height: 10px;
+  border-radius: 5px;
+  background: linear-gradient(to bottom, var(--steel), var(--rail));
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
+}
+
+.claw {
+  position: absolute;
+  top: 2px;
+  left: 0;
+  width: 46px;
+  will-change: transform;
+}
+
+.claw-arm {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  will-change: transform;
+}
+
+.claw-cable {
+  width: 3px;
+  height: 22px;
+  background: var(--steel);
+}
+
+.claw-head svg {
+  display: block;
+  fill: none;
+  stroke: var(--steel);
+  stroke-width: 4;
+  stroke-linecap: round;
+}
+
+.claw-carry {
+  position: absolute;
+  top: 44px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 20px;
+  line-height: 1;
+}
+
+.drill-body {
+  flex: 1;
+  display: flex;
+  min-height: 0;
+  padding: 0.8rem 1.4rem;
+  gap: 1rem;
+}
+
+.drill-center {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.drill-hud {
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.retry-chip {
+  padding: 0.1rem 0.55rem;
+  border: 1px solid var(--jar-line);
+  border-radius: 999px;
+  font-size: 0.75rem;
+}
+
+.prompt {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 0;
+}
+
+.prompt-text {
+  font-size: clamp(3.5rem, 16vh, 7.5rem);
+  line-height: 1.1;
+  text-align: center;
+}
+
+.prompt-text.nothing-due {
+  font-size: 1.4rem;
+  color: var(--muted);
+}
+
+.prompt-image {
+  max-height: 32vh;
+  max-width: 80%;
+  border-radius: 8px;
+  background: white;
+  padding: 6px;
+}
+
+.prompt-audio {
+  font-size: 1.5rem;
+  padding: 0.8rem 1.6rem;
+}
+
+.answer-input {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 1.7rem;
+  text-align: center;
+  width: min(420px, 85%);
+  padding: 0.45rem 0.8rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 2px solid var(--jar-line);
+  border-radius: 10px;
+  outline: none;
+}
+
+.answer-input:focus {
+  border-color: var(--accent);
+}
+
+.answer-input:disabled {
+  opacity: 0.55;
+}
+
+.feedback {
+  margin-top: 0.9rem;
+  padding: 0.6rem 1.2rem;
+  border-left: 4px solid var(--accent);
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+  text-align: center;
+  animation: feedback-in 160ms ease-out;
+}
+
+@keyframes feedback-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+.feedback-expected {
+  font-size: 1.8rem;
+  font-weight: 700;
+  font-family: ui-monospace, monospace;
+}
+
+.feedback-hint {
+  margin-top: 0.3rem;
+  font-style: italic;
+  color: var(--muted);
+  max-width: 46ch;
+}
+
+.drill-status {
+  margin: 0.8rem 0 0.4rem;
+  font-style: italic;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------------------- jar ----- */
+
+.jar-side {
+  flex: 0 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding-top: 0.4rem;
+}
+
+.jar-lid {
+  height: 16px;
+  border-radius: 8px 8px 3px 3px;
+  background: linear-gradient(to bottom, var(--steel), var(--rail));
+  margin-bottom: -3px;
+  z-index: 1;
+}
+
+.jar {
+  position: relative;
+  border: 2px solid var(--jar-line);
+  border-top-width: 1px;
+  border-radius: 8px 8px 18px 18px;
+  background: var(--glass);
+  box-shadow: inset 0 -14px 22px -14px rgba(0, 0, 0, 0.25);
+}
+
+.jar.sealed {
+  box-shadow:
+    inset 0 -14px 22px -14px rgba(0, 0, 0, 0.25),
+    0 0 18px color-mix(in srgb, var(--good) 45%, transparent);
+  border-color: var(--good);
+}
+
+.jar-slot {
+  position: absolute;
+  width: 26px;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  line-height: 1;
+  border-radius: 50%;
+}
+
+.jar-slot.empty {
+  border: 1.5px dashed color-mix(in srgb, var(--jar-line) 55%, transparent);
+}
+
+.jar-slot.pebble {
+  color: light-dark(#8d8d8d, #6c6c74);
+  font-size: 20px;
+}
+
+.jar-label {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  color: var(--muted);
+  text-align: center;
+  max-width: 180px;
+}
+
+/* -------------------------------------------------------------- pit ----- */
+
+.pit {
+  flex: 0 0 118px;
+  position: relative;
+  border-top: 3px solid var(--cabinet-edge);
+  background: var(--pit-bg);
+  overflow: hidden;
+}
+
+.pit-item {
+  position: absolute;
+  font-size: 23px;
+  line-height: 1;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
+}
+
+.pit-glass {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent 30%,
+    light-dark(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05)) 38%,
+    transparent 46%
+  );
+}
+
+.floater {
+  position: fixed;
+  z-index: 50;
+  font-size: 21px;
+  line-height: 1;
+  pointer-events: none;
+  transform: translate(-50%, -50%);
+}
+
+/* ------------------------------------------------------------ stats ----- */
+
+.stats {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem;
 }

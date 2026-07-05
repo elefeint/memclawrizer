@@ -1,42 +1,48 @@
-import './index.css';
-import { api, usingMock } from './api';
-import { TESTIDS } from '../shared/testids';
-
 /**
- * Phase 0 placeholder UI: proves the api swap point works end-to-end.
- * The Frontend agent replaces this with the home/drill/stats screens.
+ * Renderer entry: a tiny in-memory router over the three screens.
+ * All backend access goes through ./api (mock or real — never window.api).
  */
-async function main(): Promise<void> {
-  const root = document.getElementById('app');
-  if (!root) throw new Error('missing #app');
+import './index.css';
+import { mountHome } from './screens/home';
+import { mountDrill, type Nav } from './screens/drill';
+import { mountStats } from './screens/stats';
 
-  const heading = document.createElement('h1');
-  heading.textContent = 'memclawrizer';
-  root.appendChild(heading);
+const root = document.getElementById('app');
+if (!root) throw new Error('missing #app');
+const app: HTMLElement = root;
 
-  const badge = document.createElement('p');
-  badge.className = 'badge';
-  badge.textContent = usingMock ? 'walking skeleton — mock api' : 'walking skeleton — real api';
-  root.appendChild(badge);
+let unmount: (() => void) | null = null;
+let swapId = 0;
 
-  const list = document.createElement('ul');
-  list.dataset.testid = TESTIDS.deckList;
-  root.appendChild(list);
-
-  const decks = await api.decks.list();
-  for (const deck of decks) {
-    const li = document.createElement('li');
-    li.dataset.testid = TESTIDS.deckRow;
-    li.textContent = `${deck.name} — ${deck.dueCount} due, ${deck.newCount} new`;
-    list.appendChild(li);
-  }
+function showError(e: unknown): void {
+  const banner = document.createElement('pre');
+  banner.className = 'error-banner';
+  banner.textContent = String(e instanceof Error ? (e.stack ?? e.message) : e);
+  app.appendChild(banner);
 }
 
-main().catch((e) => {
-  const root = document.getElementById('app');
-  if (root) {
-    const err = document.createElement('pre');
-    err.textContent = String(e);
-    root.appendChild(err);
-  }
-});
+function swap(mount: (root: HTMLElement) => Promise<() => void>): void {
+  const id = ++swapId;
+  const prev = unmount;
+  unmount = null;
+  prev?.();
+  app.innerHTML = '';
+  mount(app).then(
+    (u) => {
+      if (id === swapId) unmount = u;
+      else u();
+    },
+    (e) => showError(e),
+  );
+}
+
+const nav: Nav = {
+  home: () => swap((r) => mountHome(r, nav)),
+  drill: (deckId, tags) => swap((r) => mountDrill(r, deckId, tags, nav)),
+  stats: (deckId) => swap((r) => mountStats(r, deckId, nav)),
+};
+
+window.addEventListener('error', (e) => showError(e.error ?? e.message));
+window.addEventListener('unhandledrejection', (e) => showError(e.reason));
+
+nav.home();
