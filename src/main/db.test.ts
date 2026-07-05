@@ -21,6 +21,49 @@ describe('openDatabase', () => {
     }
   });
 
+  it('reopening an up-to-date file is a no-op and preserves data', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
+    const file = join(dir, 'reopen.duckdb');
+    try {
+      const db1 = await openDatabase(file);
+      await db1.conn.run(
+        `INSERT INTO decks VALUES ('d1', 'Deck', NULL, '{}', 1, TIMESTAMP '2026-07-05 09:00:00')`,
+      );
+      db1.conn.closeSync();
+      db1.instance.closeSync();
+
+      const db2 = await openDatabase(file);
+      const version = await db2.conn.runAndReadAll('SELECT version FROM schema_version');
+      expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      const decks = await db2.conn.runAndReadAll('SELECT id FROM decks');
+      expect(decks.getRows()).toEqual([['d1']]);
+      db2.conn.closeSync();
+      db2.instance.closeSync();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('treats an empty schema_version table as version 0 and migrates', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
+    const file = join(dir, 'empty-version.duckdb');
+    try {
+      const instance = await DuckDBInstance.create(file);
+      const conn = await instance.connect();
+      await conn.run('CREATE TABLE schema_version(version INTEGER NOT NULL)');
+      conn.closeSync();
+      instance.closeSync();
+
+      const db = await openDatabase(file);
+      const version = await db.conn.runAndReadAll('SELECT version FROM schema_version');
+      expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      db.conn.closeSync();
+      db.instance.closeSync();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('refuses a file written by a newer schema', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
     const file = join(dir, 'newer.duckdb');
