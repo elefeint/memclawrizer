@@ -40,3 +40,12 @@ requests go in the section below.
 
 ## Status notes
 - 2026-07-05 [coordinator] Phase 0 in progress.
+- 2026-07-05 [backend] B1–B4 done, tests green (81), lint clean. Session
+  semantics match mock-api spec (verified by mirrored tests against real
+  DuckDB). Dev + packaged runs verified: "real api" badge, deck list over IPC,
+  mem:// image loads. Notes for integration: MEMCLAW_USERDATA env overrides
+  the profile dir (needed for Playwright smoke + parallel dev runs — DuckDB is
+  single-writer, a running mock-mode app locks the real DB); MEMCLAW_VERIFY=1
+  makes the app dump badge/deck-rows/mem-probe and quit; scripts/import-pack.ts
+  seeds a DB from a pack. Next: B5 generators (gen-kana, gen-piano, golden
+  tests, decks/).
