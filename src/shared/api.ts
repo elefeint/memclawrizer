@@ -1,0 +1,194 @@
+/**
+ * The window.api contract between renderer and main — FROZEN after Phase 0.
+ * Changes require a request in COORDINATION.md and coordinator approval, and
+ * must be additive (optional fields; no renames, no removals).
+ *
+ * This module is imported by BOTH the CJS main/preload bundles and the ESM
+ * renderer bundle: types and pure constants only. No Node imports, no DOM.
+ */
+
+export type PromptType = 'text' | 'image' | 'audio';
+export type Outcome = 'correct' | 'wrong' | 'timeout';
+
+export interface DeckSettings {
+  baseTimerMs: number;
+  newCardsPerSession: number;
+}
+
+export interface DeckSummary {
+  id: string;
+  name: string;
+  description: string | null;
+  cardCount: number;
+  /** Cards due now (box-1 cards are always due). */
+  dueCount: number;
+  /** Cards never drilled, available to introduce this session. */
+  newCount: number;
+  /** Cards per Leitner box, index 0 = box 1. */
+  boxCounts: [number, number, number, number, number];
+  settings: DeckSettings;
+  /** All tags present in the deck, for the drill-by-tag picker. */
+  tags: string[];
+}
+
+export interface CardView {
+  cardId: string;
+  promptType: PromptType;
+  promptText: string | null;
+  /**
+   * Opaque URL for image/audio prompts. The real backend emits
+   * mem://media/<id>; the mock emits data: URIs. The renderer never
+   * constructs or parses these.
+   */
+  mediaUrl: string | null;
+  /** Time allowed for this presentation (base × box multiplier). */
+  timerMs: number;
+  /** Jar slot this card fills, 0-based, stable across re-queues. */
+  slotIndex: number;
+  /** True when re-queued after an in-session failure (claw-slip on success). */
+  isRetry: boolean;
+}
+
+export interface SessionStart {
+  sessionId: string;
+  /** Number of cards in the session = number of jar slots. */
+  queueLength: number;
+  /** Null when nothing is due and no new cards remain. */
+  first: CardView | null;
+}
+
+export interface AnswerRequest {
+  cardId: string;
+  /** Literal typed text; '' allowed (e.g. on timeout). */
+  response: string;
+  /** Renderer-measured via performance.now(); main clamps to timerMs. */
+  elapsedMs: number;
+  timedOut: boolean;
+  /**
+   * Trinket the renderer's claw grabbed on success (renderer owns the prize
+   * pool and the weighted pick); persisted into sessions.jar. Null on failure
+   * or on retry successes (the slip).
+   */
+  prize: string | null;
+}
+
+export interface SessionEnd {
+  perfect: boolean;
+  /** Per slot: prize string, or null where a pebble sits. */
+  jar: (string | null)[];
+}
+
+export interface AnswerResult {
+  outcome: Outcome;
+  /** True → this attempt moved the Leitner box and decided the jar slot. */
+  isFirstOfSession: boolean;
+  /** Accepted answers, present when outcome !== 'correct'. */
+  expected: string[] | null;
+  /** Mnemonic to show with the failure feedback, when the card has one. */
+  hint: string | null;
+  slotIndex: number;
+  next: CardView | null;
+  /** Cards still to clear, including re-queued ones. */
+  remaining: number;
+  /** Present exactly when next is null. */
+  sessionEnd: SessionEnd | null;
+}
+
+export interface ImportResult {
+  deckId: string;
+  name: string;
+  cardsAdded: number;
+  cardsUpdated: number;
+  /** Card ids present in the DB but missing from the imported pack. */
+  orphanedCardIds: string[];
+}
+
+export interface TrophyView {
+  sessionId: string;
+  deckId: string;
+  deckName: string;
+  endedAtIso: string;
+  /** Slot count of the sealed jar. */
+  size: number;
+  jar: string[];
+}
+
+export interface CardStats {
+  cardId: string;
+  promptPreview: string;
+  box: number;
+  dueAtIso: string | null;
+  lastSuccessAtIso: string | null;
+  lifetimeCorrect: number;
+  lifetimeWrong: number;
+  medianElapsedMs: number | null;
+}
+
+export interface DeckStats {
+  deckId: string;
+  boxCounts: [number, number, number, number, number];
+  dueForecast: { dateIso: string; count: number }[];
+  dailyMedianElapsed: { dateIso: string; medianMs: number }[];
+}
+
+export interface AttemptRow {
+  id: number;
+  sessionId: string;
+  deckId: string;
+  cardId: string;
+  shownAtIso: string;
+  timerMs: number;
+  elapsedMs: number;
+  response: string;
+  outcome: Outcome;
+  isFirstOfSession: boolean;
+  boxBefore: number;
+  boxAfter: number;
+}
+
+export interface AttemptFilter {
+  deckId?: string;
+  cardId?: string;
+  outcome?: Outcome;
+  sinceIso?: string;
+  limit?: number;
+}
+
+export interface Api {
+  decks: {
+    list(): Promise<DeckSummary[]>;
+    /** Main shows the open dialog. Null = user canceled. */
+    import(): Promise<ImportResult | null>;
+    /** Main shows the save dialog. Returns written path, or null if canceled. */
+    export(deckId: string): Promise<string | null>;
+    remove(deckId: string): Promise<void>;
+    updateSettings(deckId: string, settings: DeckSettings): Promise<void>;
+  };
+  session: {
+    start(deckId: string, opts?: { tags?: string[] }): Promise<SessionStart>;
+    answer(sessionId: string, req: AnswerRequest): Promise<AnswerResult>;
+    abort(sessionId: string): Promise<void>;
+  };
+  stats: {
+    deck(deckId: string): Promise<DeckStats>;
+    cards(deckId: string): Promise<CardStats[]>;
+    attempts(filter: AttemptFilter): Promise<AttemptRow[]>;
+    trophies(): Promise<TrophyView[]>;
+  };
+}
+
+/** IPC channel names — single source of truth for preload and ipcMain. */
+export const IPC = {
+  decksList: 'decks:list',
+  decksImport: 'decks:import',
+  decksExport: 'decks:export',
+  decksRemove: 'decks:remove',
+  decksUpdateSettings: 'decks:update-settings',
+  sessionStart: 'session:start',
+  sessionAnswer: 'session:answer',
+  sessionAbort: 'session:abort',
+  statsDeck: 'stats:deck',
+  statsCards: 'stats:cards',
+  statsAttempts: 'stats:attempts',
+  statsTrophies: 'stats:trophies',
+} as const;
