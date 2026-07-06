@@ -66,7 +66,11 @@ const config: ForgeConfig = {
       [FuseV1Options.RunAsNode]: false,
       [FuseV1Options.EnableCookieEncryption]: true,
       [FuseV1Options.EnableNodeOptionsEnvironmentVariable]: false,
-      [FuseV1Options.EnableNodeCliInspectArguments]: false,
+      // Playwright's Electron driver controls the main process through the
+      // Node inspector (`--inspect=0`); with this fuse off the flag is
+      // stripped and the packaged-app smoke test hangs at launch (ADR-0005).
+      // RunAsNode stays false — that is the fuse that actually matters.
+      [FuseV1Options.EnableNodeCliInspectArguments]: true,
       [FuseV1Options.EnableEmbeddedAsarIntegrityValidation]: true,
       [FuseV1Options.OnlyLoadAppFromAsar]: true,
     }),

@@ -144,3 +144,7 @@ vite.config.ts.timestamp-*
 
 # DuckDB databases (training state is local, never committed)
 *.duckdb
+
+# Playwright
+test-results/
+playwright-report/

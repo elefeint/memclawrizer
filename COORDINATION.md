@@ -28,8 +28,10 @@ requests go in the section below.
 
 ## Integration (coordinator drives; needs B4+B5+F2+F3)
 - [ ] Real `npm start`: import kana deckpack, play a full session
-- [ ] test/e2e/smoke.spec.ts (Playwright-Electron) against the PACKAGED app
-- [ ] `npm run package` + `npm run make` on Linux
+- [x] test/e2e/smoke.spec.ts (Playwright-Electron) against the PACKAGED app
+- [x] `npm run package` + `npm run make` on Linux (deb built; rpm needs
+      rpmbuild installed — not present on this machine; zip maker is
+      darwin-scoped in forge.config.ts)
 - [ ] Elena runs docs/verify.md feel checklist
 
 ## Contract change requests
@@ -80,3 +82,17 @@ requests go in the section below.
   stats.attempts ignores AttemptFilter (returns a fixed row), so filter
   *semantics* are only exercisable against the real backend at integration.
   No contract changes, no new dependencies.
+- 2026-07-05 [backend] I1 done. @playwright/test installed (no browser
+  download needed — drives the packaged Electron binary directly).
+  test/e2e/smoke.spec.ts: seeds a temp-profile DB with mini.deckpack via the
+  normal import path, launches out/memclawrizer-linux-x64/memclawrizer
+  --no-sandbox with MEMCLAW_USERDATA, plays a full drill (adaptive answers —
+  the queue is shuffled server-side): one deliberate wrong + feedback check,
+  re-queue verified, mem:// image asserted via img.naturalWidth, jar = 3
+  prizes + 1 pebble, imperfect end, empty trophy shelf; then reopens the DB
+  and asserts 5 attempts rows (outcomes + is_first flags + no box move on
+  retry) and sessions.perfect=false with ended_at set. `npm run test:e2e`
+  passes in ~18s. REQUIRED FUSE CHANGE: EnableNodeCliInspectArguments now
+  true (ADR-0005) — Playwright hangs otherwise; RunAsNode stays false.
+  `npm run make` produces the deb; rpm blocked on missing rpmbuild binary
+  (machine, not code); zip maker is darwin-only by config.

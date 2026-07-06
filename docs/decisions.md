@@ -3,6 +3,22 @@
 Convention (adopted from ayamt): record decisions here first, then reflect them
 in CLAUDE.md. Statuses: accepted / superseded / proposed.
 
+## ADR-0005 — EnableNodeCliInspectArguments fuse stays ON — accepted (2026-07-05)
+The Playwright-Electron smoke test (test/e2e/smoke.spec.ts) drives the
+PACKAGED app — that is its whole point (catching wiring/packaging rot the
+dev run can't). Playwright's driver launches Electron with `--inspect=0
+--remote-debugging-port=0` and controls the main process through the Node
+inspector; with the EnableNodeCliInspectArguments fuse flipped off the flag
+is silently stripped and the launch hangs forever waiting for the debugger
+endpoint (observed; Chromium DevTools comes up, Node inspector never does).
+Decision: keep that fuse enabled in shipped builds so the tested artifact IS
+the shipped artifact. RunAsNode remains false — that is the fuse with real
+security teeth (prevents ELECTRON_RUN_AS_NODE abuse); allowing `--inspect`
+only lets someone who can already run local commands debug their own app.
+Related knobs that make the smoke test possible: MEMCLAW_USERDATA (isolated
+profile/DB per run; DuckDB is single-writer) and the mini fixture seeded via
+the normal import path before launch.
+
 ## ADR-0004 — Tooling deviations from ayamt — accepted (2026-07-05)
 ayamt's scaffold pins TypeScript ~4.5.4 (template default, ancient);
 memclawrizer uses TS ^5 with `strict: true`. tsconfig uses `module: ESNext`
