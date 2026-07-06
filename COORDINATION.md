@@ -49,3 +49,17 @@ requests go in the section below.
   makes the app dump badge/deck-rows/mem-probe and quit; scripts/import-pack.ts
   seeds a DB from a pack. Next: B5 generators (gen-kana, gen-piano, golden
   tests, decks/).
+- 2026-07-05 [frontend] F1 done (drill-machine + 18 unit tests). F2 done (drill
+  screen, WebAudio, router; verified by playing imperfect/perfect/abort mock
+  sessions over CDP against `start:mock`). F3 in progress: home.ts rewritten
+  (deck rows with box mini-bar, tag picker, export, settings; trophy shelf) —
+  compiles + tests green, CSS for the new home elements NOT yet written, not
+  yet verified in-app. Next: home CSS, lint pass, verify under start:mock,
+  commit F3, then F4 stats screen.
+  NOTE for integration: `npm run lint` cannot run inside agent worktrees
+  (ESLint 8 cascades to the parent checkout's .eslintrc.json through
+  `.claude/worktrees/` and default-ignores dot-dirs); equivalent gate used:
+  `npx eslint --no-eslintrc -c .eslintrc.json --resolve-plugins-relative-to . --ext .ts,.tsx .`
+  Works fine from a normal checkout; adding `"root": true` to .eslintrc.json
+  (root config, not frontend-owned) would fix worktrees for everyone.
+  [coordinator: backend already added "root": true in B1 — fixed on main.]
