@@ -148,3 +148,6 @@ vite.config.ts.timestamp-*
 # Playwright
 test-results/
 playwright-report/
+
+# Claude Code session dirs (agent worktrees live here)
+.claude/
