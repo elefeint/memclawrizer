@@ -18,7 +18,12 @@ syllabaries → romaji (text). Content is pluggable via `.deckpack` (zip: deck.j
 media/); prompts may be text, image, or audio.
 
 ## Status
-- 2026-07-05: design done (**DESIGN.md**); Phase 0 walking skeleton in progress.
+- 2026-07-05: **v0.0.1 feature-complete.** All milestones done (Phase 0, B1–B5,
+  F1–F4, I1): drill/home/stats screens, 4 generated starter decks in `decks/`,
+  117 unit/DB tests + Playwright-Electron smoke test against the packaged app
+  (`npm run test:e2e`), deb built via `npm run make`. Remaining: Elena's manual
+  feel checklist (docs/verify.md) and taste-driven tuning
+  (src/renderer/timings.ts, audio.ts MASTER_VOLUME).
   Repo: git@github.com:elefeint/memclawrizer.git
 
 ## Agent team & file ownership (build phase)
