@@ -16,14 +16,14 @@ requests go in the section below.
       committed decks/*.deckpack
 
 ## Frontend agent — milestones
-- [ ] F1 drill-machine.ts (pure state machine) + unit tests over
+- [x] F1 drill-machine.ts (pure state machine) + unit tests over
       correct/wrong/timeout/re-queue-slip/abort/perfect-seal
-- [ ] F2 drill screen: claw rail timer (tick accel last 25%), prize pit
+- [x] F2 drill screen: claw rail timer (tick accel last 25%), prize pit
       (weighted emoji pool), honeycomb jar, prompt branches, feedback
       (answer + mnemonic), Esc abort, WebAudio tick/ding/seal-chime, testids
-- [ ] F3 home screen: deck list (due/new counts, box mini-bar, drill/drill-by-tag/
+- [x] F3 home screen: deck list (due/new counts, box mini-bar, drill/drill-by-tag/
       import/export), trophy shelf
-- [ ] F4 stats screen: box histogram, due forecast, response-time trend,
+- [x] F4 stats screen: box histogram, due forecast, response-time trend,
       per-card table, filterable attempt log
 
 ## Integration (coordinator drives; needs B4+B5+F2+F3)
@@ -72,3 +72,11 @@ requests go in the section below.
   engraved SMuFL — if Elena wants prettier clefs, only the two path constants
   in scripts/gen-piano.ts need replacing (then `npm run gen:decks` refreshes
   the goldens).
+- 2026-07-05 [frontend] F3 and F4 done and verified over CDP against
+  `start:mock` (home widgets incl. tag-picker drill entry, settings save,
+  import/export status lines, trophy after perfect run; stats charts render
+  light+dark with working tooltips, filter row re-queries the attempt log).
+  All four frontend milestones complete; 22 tests green. The mock's
+  stats.attempts ignores AttemptFilter (returns a fixed row), so filter
+  *semantics* are only exercisable against the real backend at integration.
+  No contract changes, no new dependencies.
