@@ -91,24 +91,190 @@ button:hover {
 }
 
 .deck-row {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 1rem;
   padding: 0.8rem 1rem;
   border: 1px solid var(--cabinet-edge);
   border-radius: 10px;
   background: var(--cabinet);
 }
 
+.home-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.home-status {
+  color: var(--good);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.deck-main {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.9rem;
+  min-width: 0;
+}
+
 .deck-name {
   font-weight: 600;
-  flex: 1;
 }
 
 .deck-counts {
   color: var(--muted);
   font-family: ui-monospace, monospace;
   font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.deck-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.box-bar {
+  display: flex;
+  gap: 2px;
+  width: 110px;
+  height: 10px;
+  border-radius: 5px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+
+.box-seg {
+  min-width: 3px;
+  border-radius: 2px;
+}
+
+.box-seg.zero {
+  flex-grow: 0.06 !important;
+  opacity: 0.25;
+}
+
+.box-1 { background: light-dark(#c86a5a, #a34a3c); }
+.box-2 { background: light-dark(#c99a4e, #a37c3a); }
+.box-3 { background: light-dark(#b0b054, #8c8c40); }
+.box-4 { background: light-dark(#7fae62, #62894a); }
+.box-5 { background: light-dark(#4f9a72, #3c7a58); }
+
+.tag-picker,
+.deck-settings {
+  grid-column: 1 / -1;
+  font-size: 0.88rem;
+}
+
+.tag-picker summary,
+.deck-settings summary {
+  cursor: pointer;
+  color: var(--muted);
+  width: max-content;
+}
+
+.tag-picker-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.9rem;
+  padding: 0.5rem 0 0.2rem;
+}
+
+.tag-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-family: ui-monospace, monospace;
+}
+
+.deck-settings-body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1.2rem;
+  padding: 0.5rem 0 0.2rem;
+}
+
+.deck-settings-body input {
+  width: 6.5em;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--jar-line);
+  border-radius: 6px;
+  padding: 0.15rem 0.4rem;
+  margin-left: 0.4rem;
+}
+
+.deck-empty,
+.shelf-empty {
+  color: var(--muted);
+  font-style: italic;
+  list-style: none;
+}
+
+/* ----------------------------------------------------- trophy shelf ----- */
+
+.trophy-section h2 {
+  font-size: 1rem;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  border-bottom: 3px double var(--cabinet-edge);
+  padding-bottom: 0.3rem;
+}
+
+.trophy-shelf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.9rem;
+  align-items: flex-end;
+  min-height: 3rem;
+  padding: 0.4rem 0.2rem 0.8rem;
+  border-bottom: 6px solid var(--cabinet-edge);
+}
+
+.trophy-jar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  cursor: default;
+}
+
+.trophy-jar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 6px;
+}
+
+.trophy-lid {
+  width: 34px;
+  height: 8px;
+  border-radius: 4px 4px 2px 2px;
+  background: linear-gradient(to bottom, var(--steel), var(--rail));
+  margin-bottom: -2px;
+  z-index: 1;
+}
+
+.trophy-glass {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  place-items: center;
+  width: 48px;
+  min-height: 44px;
+  padding: 3px;
+  font-size: 11px;
+  line-height: 1.15;
+  border: 2px solid var(--jar-line);
+  border-top-width: 1px;
+  border-radius: 4px 4px 10px 10px;
+  background: var(--glass);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--good) 30%, transparent);
 }
 
 /* ------------------------------------------------------------ drill ----- */
