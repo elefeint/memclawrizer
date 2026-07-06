@@ -43,8 +43,10 @@ interface Clef {
 }
 
 // Stylized G-clef: a vertical sweep through the staff with a spiral that
-// wraps the G line (y=96), plus the tail below.
-const TREBLE_CLEF_SVG = `<g stroke="black" fill="none" stroke-width="3" stroke-linecap="round">
+// wraps the G line (y=96), plus the tail below. The paths' spiral is centered
+// on y=120 as authored, so the group is shifted up two staff steps (-24) to
+// put it on the G line.
+const TREBLE_CLEF_SVG = `<g stroke="black" fill="none" stroke-width="3" stroke-linecap="round" transform="translate(0 -24)">
     <path d="M 46 132 C 40 122 40 112 47 106 C 56 98 66 90 64 76 C 62 64 54 58 50 66 C 44 78 50 100 52 118 C 54 134 52 142 46 146 C 41 149 34 146 34 140 C 34 135 38 132 42 133"/>
     <path d="M 47 106 C 38 112 36 122 43 128 C 50 134 60 130 60 121 C 60 113 52 108 47 110" fill="none"/>
   </g>`;
