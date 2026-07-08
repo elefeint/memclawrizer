@@ -1,0 +1,105 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 140 160">
+  <!--
+    Asset A: slightly-3D jar (docs/graphics-requirements.md §2).
+    Sliced by code via data-viewbox per group; #jar-back / #jar-front stretch
+    (preserveAspectRatio=none) to the runtime jar box (2-7 cols x 1-15 rows of
+    30px slots), so every shape here must survive non-uniform scaling:
+    gradients + full-width/full-height rects and ellipses only, no baked slot
+    holes. Slot contents are code-positioned DOM between #jar-back and
+    #jar-front.
+    Theme: base tint is var(- -glass); shading/speculars are black/white at
+    low opacity so they read on both cabinet surfaces.
+  -->
+  <defs>
+    <linearGradient id="jarEdgeShade" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.20"/>
+      <stop offset="0.10" stop-color="#000" stop-opacity="0.07"/>
+      <stop offset="0.5" stop-color="#000" stop-opacity="0"/>
+      <stop offset="0.90" stop-color="#000" stop-opacity="0.07"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.20"/>
+    </linearGradient>
+    <linearGradient id="jarBackVert" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.04"/>
+      <stop offset="0.7" stop-color="#000" stop-opacity="0.03"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.06"/>
+    </linearGradient>
+    <linearGradient id="jarCurveL" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0.14"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="jarCurveR" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#000" stop-opacity="0"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.14"/>
+    </linearGradient>
+    <linearGradient id="jarSpec" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0.13"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="lidMetal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" style="stop-color:var(--steel)"/>
+      <stop offset="0.45" stop-color="#fff" stop-opacity="0.9"/>
+      <stop offset="0.55" style="stop-color:var(--steel)"/>
+      <stop offset="1" style="stop-color:var(--rail)"/>
+    </linearGradient>
+    <linearGradient id="rimGlass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- interior back wall; sits BEHIND the code-owned trinket layer -->
+  <g id="jar-back" data-viewbox="0 0 100 100">
+    <rect x="0" y="0" width="100" height="100" rx="7" style="fill:var(--glass)"/>
+    <rect x="0" y="0" width="100" height="100" rx="7" fill="url(#jarBackVert)"/>
+    <rect x="0" y="0" width="100" height="100" rx="7" fill="url(#jarEdgeShade)"/>
+    <!-- elliptical floor hint -->
+    <ellipse cx="50" cy="95" rx="45" ry="4.5" fill="#000" opacity="0.07"/>
+    <ellipse cx="50" cy="93.4" rx="41" ry="3.2" fill="#fff" opacity="0.05"/>
+  </g>
+
+  <!-- glass illusion in FRONT of the trinkets; everything <=15% opacity -->
+  <g id="jar-front" data-viewbox="0 0 100 100">
+    <rect x="0" y="0" width="9" height="100" fill="url(#jarCurveL)"/>
+    <rect x="91" y="0" width="9" height="100" fill="url(#jarCurveR)"/>
+    <!-- broad specular band, top-left convention -->
+    <rect x="12" y="3" width="13" height="94" rx="6" fill="url(#jarSpec)"/>
+    <!-- thin companion streak -->
+    <rect x="28" y="6" width="3.5" height="88" rx="1.7" fill="#fff" opacity="0.06"/>
+    <!-- subtle neck ellipse -->
+    <ellipse cx="50" cy="4.5" rx="46" ry="3.4" fill="none" stroke="#fff" stroke-opacity="0.10" stroke-width="1.4"/>
+    <!-- faint bottom-right counter-shine -->
+    <rect x="82" y="30" width="4" height="62" rx="2" fill="#fff" opacity="0.04"/>
+  </g>
+
+  <!-- neck ring + screw threads; stretches horizontally only -->
+  <g id="jar-rim" data-viewbox="0 0 100 16">
+    <rect x="0" y="0" width="100" height="16" rx="4" style="fill:var(--glass)"/>
+    <rect x="0" y="0" width="100" height="16" rx="4" fill="url(#rimGlass)"/>
+    <path d="M2 4.5 Q50 2.5 98 4.5" fill="none" style="stroke:var(--jar-line)" stroke-opacity="0.55" stroke-width="1.1"/>
+    <path d="M2 8.5 Q50 6.5 98 8.5" fill="none" style="stroke:var(--jar-line)" stroke-opacity="0.45" stroke-width="1.1"/>
+    <path d="M2 12.5 Q50 10.5 98 12.5" fill="none" style="stroke:var(--jar-line)" stroke-opacity="0.35" stroke-width="1.1"/>
+  </g>
+
+  <!-- metallic lid; flat design so a code-driven ~20deg screw looks right -->
+  <!-- pivot: 36,10 (lid center) -->
+  <g id="jar-lid" data-viewbox="0 0 72 20">
+    <rect x="1" y="2" width="70" height="14" rx="6" fill="url(#lidMetal)"/>
+    <rect x="1" y="2" width="70" height="14" rx="6" fill="none" style="stroke:var(--rail)" stroke-width="1"/>
+    <!-- knurled edge -->
+    <path d="M6 3.4v11.2 M11 3v12 M16 3v12 M21 3v12 M26 3v12 M31 3v12 M36 3v12 M41 3v12 M46 3v12 M51 3v12 M56 3v12 M61 3v12 M66 3.4v11.2"
+          fill="none" stroke="#000" stroke-opacity="0.16" stroke-width="1.4"/>
+    <!-- bottom flange -->
+    <rect x="4" y="15" width="64" height="3" rx="1.5" style="fill:var(--rail)"/>
+  </g>
+
+  <!-- label plate for sealed jars; code renders text as HTML on top -->
+  <!-- safe text box: 8,7 to 132,37 -->
+  <g id="jar-label-plate" data-viewbox="0 0 140 44">
+    <rect x="2" y="2" width="136" height="40" rx="6" fill="#f4ead6"/>
+    <rect x="2" y="2" width="136" height="40" rx="6" fill="url(#jarBackVert)"/>
+    <rect x="2" y="2" width="136" height="40" rx="6" fill="none" style="stroke:var(--jar-line)" stroke-opacity="0.6" stroke-width="1.2"/>
+    <circle cx="9" cy="22" r="1.6" style="fill:var(--jar-line)" opacity="0.5"/>
+    <circle cx="131" cy="22" r="1.6" style="fill:var(--jar-line)" opacity="0.5"/>
+  </g>
+</svg>
