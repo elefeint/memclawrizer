@@ -1,0 +1,103 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 120">
+  <!--
+    Asset B: lifelike claw (docs/graphics-requirements.md §3).
+    Sliced by code via data-viewbox: #trolley rides the rail (never drops),
+    #cable stretches via code scaleY about its TOP edge (declared method; the
+    braid is long twisted strands, so stretching elongates the twist instead
+    of tearing it), the head groups drop with the arm. Fingers are authored
+    in the OPEN pose; code closes them by rotating about the pivots below
+    (CSS transform, view-box transform-origin):
+      finger-left  pivot: 25,12   close by rotate(-22deg)
+      finger-right pivot: 39,12   close by rotate(+22deg)
+      finger-back  pivot: 32,11   close by rotate(+6deg) (depth hint only)
+    Layering contract: #finger-back renders BEHIND the carried prize; #hub,
+    #finger-left, #finger-right, #lamp render IN FRONT of it.
+    carry-anchor: 32,36  (head coordinate space; prize glyph ~20px em)
+    wheel pivots: wheel-left 18,10 / wheel-right 46,10
+  -->
+  <defs>
+    <linearGradient id="clawSteelV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>
+      <stop offset="0.35" style="stop-color:var(--steel)"/>
+      <stop offset="1" style="stop-color:var(--rail)"/>
+    </linearGradient>
+    <linearGradient id="clawSteelH" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" style="stop-color:var(--rail)"/>
+      <stop offset="0.45" style="stop-color:var(--steel)"/>
+      <stop offset="0.6" stop-color="#fff" stop-opacity="0.5"/>
+      <stop offset="1" style="stop-color:var(--rail)"/>
+    </linearGradient>
+    <radialGradient id="clawBolt" cx="0.35" cy="0.3" r="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.7"/>
+      <stop offset="0.5" style="stop-color:var(--steel)"/>
+      <stop offset="1" style="stop-color:var(--rail)"/>
+    </radialGradient>
+  </defs>
+
+  <!-- carriage riding the rail -->
+  <g id="trolley" data-viewbox="0 0 64 24">
+    <g id="wheel-left"><!-- pivot: 18,10 -->
+      <circle cx="18" cy="10" r="5" fill="url(#clawBolt)" style="stroke:var(--rail)" stroke-width="1"/>
+      <path d="M18 6.4v7.2 M14.4 10h7.2" style="stroke:var(--rail)" stroke-width="1.3"/>
+      <circle cx="18" cy="10" r="1.3" style="fill:var(--rail)"/>
+    </g>
+    <g id="wheel-right"><!-- pivot: 46,10 -->
+      <circle cx="46" cy="10" r="5" fill="url(#clawBolt)" style="stroke:var(--rail)" stroke-width="1"/>
+      <path d="M46 6.4v7.2 M42.4 10h7.2" style="stroke:var(--rail)" stroke-width="1.3"/>
+      <circle cx="46" cy="10" r="1.3" style="fill:var(--rail)"/>
+    </g>
+    <rect x="12" y="13" width="40" height="9" rx="3.5" fill="url(#clawSteelV)" style="stroke:var(--rail)" stroke-width="1"/>
+    <rect x="28" y="20" width="8" height="4" rx="1.5" style="fill:var(--rail)"/>
+    <rect x="14.5" y="15" width="35" height="1.6" rx="0.8" fill="#fff" opacity="0.4"/>
+  </g>
+
+  <!-- braided cable; code stretches with scaleY (transform-origin top) -->
+  <g id="cable" data-viewbox="26 0 12 28">
+    <path d="M30.6 0 C34.5 4.7 29.5 9.3 33.4 14 C29.5 18.7 34.5 23.3 30.6 28"
+          fill="none" style="stroke:var(--steel)" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M33.4 0 C29.5 4.7 34.5 9.3 30.6 14 C34.5 18.7 29.5 23.3 33.4 28"
+          fill="none" style="stroke:var(--rail)" stroke-width="2.1" stroke-linecap="round"/>
+    <path d="M31.4 1.2 C33.6 5 30.4 8.9 32.9 12.8" fill="none" stroke="#fff" stroke-opacity="0.35" stroke-width="0.8"/>
+  </g>
+
+  <!-- ==== head space (0 0 64 64): hub + fingers ==== -->
+
+  <!-- center finger; renders BEHIND the carried prize -->
+  <g id="finger-back" data-viewbox="0 0 64 64"><!-- pivot: 32,11 -->
+    <path d="M29 8 C26.5 20 26.5 34 30 46 C30.8 48.8 33.2 48.8 34 46 C37.5 34 37.5 20 35 8 Z"
+          style="fill:var(--rail)"/>
+    <path d="M30.5 12 C29 22 29 33 31 43" fill="none" stroke="#fff" stroke-opacity="0.22" stroke-width="1"/>
+    <circle cx="32" cy="30" r="2" style="fill:var(--steel)" opacity="0.8"/>
+  </g>
+
+  <!-- wrist block; prize hangs at carry-anchor 32,38 -->
+  <g id="hub" data-viewbox="0 0 64 64">
+    <ellipse cx="32" cy="18" rx="11.5" ry="2.6" fill="#000" opacity="0.18"/>
+    <rect x="22" y="3" width="20" height="13" rx="3" fill="url(#clawSteelH)" style="stroke:var(--rail)" stroke-width="1"/>
+    <rect x="24" y="4.6" width="16" height="1.7" rx="0.8" fill="#fff" opacity="0.45"/>
+    <circle cx="32" cy="9.5" r="2.6" fill="url(#clawBolt)"/>
+    <rect x="29" y="0" width="6" height="4" rx="1.5" style="fill:var(--rail)"/>
+  </g>
+
+  <!-- front-left finger; overlaps the carried prize -->
+  <g id="finger-left" data-viewbox="0 0 64 64"><!-- pivot: 25,12 -->
+    <path d="M21 9 C13 18 7 32 11 46 C12 50 15 53 17 51 C14 38 18 24 28 14 Z"
+          fill="url(#clawSteelV)" style="stroke:var(--rail)" stroke-width="0.9"/>
+    <path d="M19.5 13 C13.5 22 10.5 34 13.2 45" fill="none" stroke="#fff" stroke-opacity="0.4" stroke-width="1.1"/>
+    <circle cx="12.6" cy="33" r="1.8" fill="url(#clawBolt)"/>
+  </g>
+
+  <!-- front-right finger; overlaps the carried prize -->
+  <g id="finger-right" data-viewbox="0 0 64 64"><!-- pivot: 39,12 -->
+    <path d="M43 9 C51 18 57 32 53 46 C52 50 49 53 47 51 C50 38 46 24 36 14 Z"
+          fill="url(#clawSteelV)" style="stroke:var(--rail)" stroke-width="0.9"/>
+    <path d="M44.5 13 C50.5 22 53.5 34 50.8 45" fill="none" stroke="#fff" stroke-opacity="0.4" stroke-width="1.1"/>
+    <circle cx="51.4" cy="33" r="1.8" fill="url(#clawBolt)"/>
+  </g>
+
+  <!-- accent lamp; code tints it during the final-25% tick acceleration -->
+  <g id="lamp" data-viewbox="0 0 64 64">
+    <circle id="lamp-dome" cx="42.5" cy="2.6" r="2.4" style="fill:var(--steel)" stroke="#000" stroke-opacity="0.25" stroke-width="0.7"/>
+    <circle id="lamp-glow" cx="42.5" cy="2.6" r="4.6" style="fill:var(--accent)" opacity="0"/>
+  </g>
+</svg>

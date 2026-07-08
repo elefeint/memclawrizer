@@ -7,6 +7,7 @@
 import { api } from '../api';
 import { TESTIDS } from '../../shared/testids';
 import type { DeckSummary, TrophyView } from '../../shared/api';
+import { ASSETS, svgLayer } from '../svg-assets';
 import type { Nav } from './drill';
 
 function el<K extends keyof HTMLElementTagNameMap>(
@@ -189,15 +190,18 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
     jar.tabIndex = 0; // hover AND keyboard-focus reveal the label
     const date = new Date(t.endedAtIso);
     jar.title = `${t.deckName} — ${date.toLocaleDateString()} — ${t.size} ${t.size === 1 ? 'prize' : 'prizes'}`;
-    const lid = el('div', 'trophy-lid');
+    // Asset E: prize glyphs sandwiched between mini-jar back and front+lid.
     const glass = el('div', 'trophy-glass');
-    // A peek of the actual contents; the title carries the full story.
     for (const prize of t.jar.slice(0, 9)) {
       const s = el('span');
       s.textContent = prize;
       glass.appendChild(s);
     }
-    jar.append(lid, glass);
+    jar.append(
+      svgLayer(ASSETS.miniJar, ['mini-back'], { className: 'trophy-mini' }),
+      glass,
+      svgLayer(ASSETS.miniJar, ['mini-front'], { className: 'trophy-mini' }),
+    );
     return jar;
   }
 
@@ -216,6 +220,10 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
   async function refreshShelf(): Promise<void> {
     const trophies = await api.stats.trophies();
     shelf.innerHTML = '';
+    // The wood strip the minis sit on (Asset E #shelf), stretched full width.
+    shelf.appendChild(
+      svgLayer(ASSETS.miniJar, ['shelf'], { className: 'shelf-strip', stretch: true }),
+    );
     if (trophies.length === 0) {
       const empty = el('p', 'shelf-empty');
       empty.textContent = 'perfect sessions live here';

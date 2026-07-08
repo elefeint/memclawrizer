@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 80">
+  <!--
+    Asset E: trophy-shelf mini jar + shelf (docs/graphics-requirements.md §6).
+    Simplified jar variant legible at ~40-56px wide: silhouette + lid + one
+    soft highlight, no threads. Interior stays clear — code renders up to 9
+    prize glyphs between #mini-back and #mini-front. #shelf is a separate
+    horizontally-stretchable wood strip the minis sit on.
+  -->
+  <defs>
+    <linearGradient id="miniLid" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.55"/>
+      <stop offset="0.4" style="stop-color:var(--steel)"/>
+      <stop offset="1" style="stop-color:var(--rail)"/>
+    </linearGradient>
+    <linearGradient id="miniGlassV" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="miniSpec" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0.12"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="shelfWood" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fff" stop-opacity="0.18"/>
+      <stop offset="0.25" style="stop-color:var(--cabinet-edge)"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.22"/>
+    </linearGradient>
+  </defs>
+
+  <!-- glass body behind the prize glyphs -->
+  <g id="mini-back" data-viewbox="0 0 56 64">
+    <path d="M6 10 h44 v42 q0 9 -9 9 h-26 q-9 0 -9 -9 Z" style="fill:var(--glass)"/>
+    <path d="M6 10 h44 v42 q0 9 -9 9 h-26 q-9 0 -9 -9 Z" fill="url(#miniGlassV)"/>
+    <path d="M6 10 h44 v42 q0 9 -9 9 h-26 q-9 0 -9 -9 Z" fill="none" style="stroke:var(--jar-line)" stroke-opacity="0.7" stroke-width="1.6"/>
+    <ellipse cx="28" cy="57" rx="18" ry="2.4" fill="#000" opacity="0.10"/>
+  </g>
+
+  <!-- glass front + lid, over the prize glyphs -->
+  <g id="mini-front" data-viewbox="0 0 56 64">
+    <rect x="10" y="13" width="7" height="42" rx="3.5" fill="url(#miniSpec)"/>
+    <rect x="9" y="3" width="38" height="9" rx="4" fill="url(#miniLid)" style="stroke:var(--rail)" stroke-width="1"/>
+    <rect x="11" y="10.5" width="34" height="2.2" rx="1.1" style="fill:var(--rail)"/>
+  </g>
+
+  <!-- wood strip; stretches horizontally under the row of minis -->
+  <g id="shelf" data-viewbox="0 0 120 12">
+    <rect x="0" y="0" width="120" height="12" rx="2" fill="url(#shelfWood)"/>
+    <path d="M4 4.2 Q34 3 62 4.4 T118 4.0" fill="none" stroke="#000" stroke-opacity="0.10" stroke-width="0.9"/>
+    <path d="M2 8.3 Q40 9.4 74 8.1 T119 8.6" fill="none" stroke="#000" stroke-opacity="0.08" stroke-width="0.9"/>
+    <rect x="0" y="0" width="120" height="1.4" fill="#fff" opacity="0.18"/>
+  </g>
+</svg>

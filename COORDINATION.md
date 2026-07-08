@@ -96,3 +96,16 @@ requests go in the section below.
   true (ADR-0005) — Playwright hangs otherwise; RunAsNode stays false.
   `npm run make` produces the deb; rpm blocked on missing rpmbuild binary
   (machine, not code); zip maker is darwin-only by config.
+- 2026-07-07 [frontend] Graphics upgrade Assets A-E done
+  (docs/graphics-requirements.md; Asset F is the coordinator's). Five sliced
+  inline SVGs under src/renderer/assets/ (1.4-5.9KB each) + svg-assets.ts
+  injection helper (?raw import, per-group data-viewbox slicing); wired into
+  drill (layered jar back/slots/front/rim + lid + label plate, articulated
+  claw with finger close/open at declared pivots, scaleY cable stretch,
+  wheel spin during travel, final-25% accent lamp, drawn pebble, pit set
+  dressing) and home (mini-jar trophies on a wood shelf strip).
+  Screenshot-verified per animation phase (grab/slip/pebble/seal/empty) in
+  BOTH themes over CDP against start:mock; travel locked 60fps (worst frame
+  16.8ms in the dark run). data-testids and jar-slot .prize/.pebble classes
+  untouched, but please re-run `npm run test:e2e` against a fresh package
+  before release (not runnable from this worktree). 117 tests + lint green.

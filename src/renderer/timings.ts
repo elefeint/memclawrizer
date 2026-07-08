@@ -26,6 +26,8 @@ export const EXIT_DELAY_MS = 700;
 /** Claw-drop / rise segments inside grab & slip (must sum under GRAB/SLIP_MS). */
 export const CLAW_DROP_MS = 240;
 export const CLAW_RISE_MS = 240;
+/** Finger close/open articulation (matches the CSS transition duration). */
+export const CLAW_CLOSE_MS = 130;
 export const PRIZE_FLY_MS = 480;
 export const PRIZE_FALL_MS = 420;
 

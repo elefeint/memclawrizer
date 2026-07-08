@@ -18,6 +18,7 @@ import {
   reduce,
 } from '../drill-machine';
 import { PRIZE_POOL } from '../prize-pool';
+import { ASSETS, pebbleNode, svgLayer } from '../svg-assets';
 import * as audio from '../audio';
 import * as T from '../timings';
 
@@ -27,9 +28,11 @@ export interface Nav {
   stats(deckId: string): void;
 }
 
-const CLAW_W = 46;
+const CLAW_W = 64; // claw.svg head width; travel = rail width − CLAW_W
+const CABLE_LEN = 28; // claw.svg #cable base length; stretched by scaleY on drop
 const PIT_ITEMS = 26;
-const PEBBLE = '●';
+
+const sleep = (ms: number) => new Promise<void>((r) => window.setTimeout(r, ms));
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -54,19 +57,20 @@ export async function mountDrill(
   const railWrap = el('div', 'rail-wrap');
   const rail = el('div', 'rail');
   const claw = el('div', 'claw');
+  // Asset B slices: trolley rides the rail (never drops), the cable stretches
+  // (scaleY about its top), the head drops with the arm. The carried prize is
+  // sandwiched between #finger-back and the hub + front-finger layer — that
+  // overlap is what sells "grabbed".
+  const clawTrolley = svgLayer(ASSETS.claw, ['trolley'], { className: 'claw-trolley' });
+  const clawCable = svgLayer(ASSETS.claw, ['cable'], { className: 'claw-cable-svg', stretch: true });
   const clawArm = el('div', 'claw-arm');
-  const clawCable = el('div', 'claw-cable');
-  const clawHead = el('div', 'claw-head');
-  clawHead.innerHTML =
-    '<svg viewBox="0 0 40 34" width="40" height="34" aria-hidden="true">' +
-    '<path d="M20 0 v6" />' +
-    '<path d="M20 6 C 7 8, 4 22, 11 30" />' +
-    '<path d="M20 6 C 33 8, 36 22, 29 30" />' +
-    '<path d="M20 6 C 17 14, 17 22, 20 28" />' +
-    '</svg>';
+  const clawHeadBack = svgLayer(ASSETS.claw, ['finger-back'], { className: 'claw-head-back' });
   const clawCarry = el('span', 'claw-carry');
-  clawArm.append(clawCable, clawHead, clawCarry);
-  claw.appendChild(clawArm);
+  const clawHead = svgLayer(ASSETS.claw, ['hub', 'finger-left', 'finger-right', 'lamp'], {
+    className: 'claw-head-front',
+  });
+  clawArm.append(clawHeadBack, clawCarry, clawHead);
+  claw.append(clawTrolley, clawCable, clawArm);
   rail.appendChild(claw);
   railWrap.appendChild(rail);
 
@@ -96,16 +100,26 @@ export async function mountDrill(
   const jarSide = el('aside', 'jar-side');
   const jarEl = el('div', 'jar', TESTIDS.jar);
   const jarLid = el('div', 'jar-lid');
+  jarLid.appendChild(svgLayer(ASSETS.jar, ['jar-lid'], { className: 'jar-lid-svg', stretch: true }));
   jarLid.hidden = true;
   const jarLabel = el('div', 'jar-label');
+  jarLabel.appendChild(
+    svgLayer(ASSETS.jar, ['jar-label-plate'], { className: 'jar-label-plate', stretch: true }),
+  );
+  const jarLabelText = el('span', 'jar-label-text');
+  jarLabel.appendChild(jarLabelText);
   jarLabel.hidden = true;
   jarSide.append(jarLid, jarEl, jarLabel);
 
   body.append(center, jarSide);
 
+  // Asset D slices: back wall, floor strip, glass reflection; emoji trinkets
+  // are code-scattered between the floor and the glass.
   const pit = el('div', 'pit');
-  const pitGlass = el('div', 'pit-glass');
-  pit.appendChild(pitGlass);
+  const pitBack = svgLayer(ASSETS.pit, ['pit-back'], { className: 'pit-layer', stretch: true });
+  const pitFloor = svgLayer(ASSETS.pit, ['pit-floor'], { className: 'pit-floor-svg', stretch: true });
+  const pitGlass = svgLayer(ASSETS.pit, ['pit-glass'], { className: 'pit-layer pit-glass-svg', stretch: true });
+  pit.append(pitBack, pitFloor, pitGlass);
 
   screen.append(railWrap, body, pit);
   root.appendChild(screen);
@@ -131,6 +145,9 @@ export async function mountDrill(
   function buildJar(n: number): void {
     jarEl.innerHTML = '';
     slotEls = [];
+    // Asset A slices, sized by code: back wall behind the slots, glass +
+    // rim in front of them (paint order = DOM order; all positioned).
+    jarEl.appendChild(svgLayer(ASSETS.jar, ['jar-back'], { className: 'jar-layer', stretch: true }));
     const cell = 30;
     const rowH = 26;
     const pad = 12;
@@ -158,13 +175,17 @@ export async function mountDrill(
       jarEl.appendChild(s);
       slotEls.push(s);
     }
+    jarEl.appendChild(svgLayer(ASSETS.jar, ['jar-front'], { className: 'jar-layer', stretch: true }));
+    jarEl.appendChild(svgLayer(ASSETS.jar, ['jar-rim'], { className: 'jar-rim-svg', stretch: true }));
   }
 
   function setSlot(i: number, kind: 'prize' | 'pebble', prize?: string): void {
     const s = slotEls[i];
     if (!s) return;
     s.className = `jar-slot ${kind}`;
-    s.textContent = kind === 'prize' ? (prize ?? '') : PEBBLE;
+    s.textContent = '';
+    if (kind === 'prize') s.textContent = prize ?? '';
+    else s.appendChild(pebbleNode());
   }
 
   /**
@@ -182,9 +203,10 @@ export async function mountDrill(
   // ----------------------------------------------------------- floaters ----
   const floaters = new Set<HTMLElement>();
 
-  function spawnFloater(text: string, from: { x: number; y: number }): HTMLElement {
+  function spawnFloater(content: string | Node, from: { x: number; y: number }): HTMLElement {
     const f = el('span', 'floater');
-    f.textContent = text;
+    if (typeof content === 'string') f.textContent = content;
+    else f.appendChild(content);
     f.style.left = `${from.x}px`;
     f.style.top = `${from.y}px`;
     document.body.appendChild(f);
@@ -202,13 +224,13 @@ export async function mountDrill(
   }
 
   function flyText(
-    text: string,
+    content: string | Node,
     from: { x: number; y: number },
     to: { x: number; y: number },
     ms: number,
     fade = false,
   ): Promise<void> {
-    const f = spawnFloater(text, from);
+    const f = spawnFloater(content, from);
     const anim = f.animate(
       [
         { transform: 'translate(-50%, -50%)', opacity: 1 },
@@ -237,8 +259,12 @@ export async function mountDrill(
     // Reset everything a stalled animation might have left behind.
     clawGen++;
     for (const a of clawArm.getAnimations()) a.cancel();
+    for (const a of clawCable.getAnimations()) a.cancel();
     clawArm.style.transform = 'translateY(0px)';
+    clawCable.style.transform = 'scaleY(1)';
     clawCarry.textContent = '';
+    claw.classList.remove('fingers-closed', 'lamp-on');
+    claw.classList.add('travelling'); // trolley wheels spin during travel
     claw.style.transition = 'none';
     claw.style.transform = 'translateX(0px)';
     void claw.offsetWidth; // reflow so the next transition starts from 0
@@ -250,7 +276,11 @@ export async function mountDrill(
     const m = getComputedStyle(claw).transform;
     claw.style.transition = 'none';
     claw.style.transform = m === 'none' ? 'translateX(0px)' : m;
+    claw.classList.remove('travelling', 'lamp-on');
   }
+
+  const closeFingers = () => claw.classList.add('fingers-closed');
+  const openFingers = () => claw.classList.remove('fingers-closed');
 
   function armDropPx(): number {
     const head = clawHead.getBoundingClientRect();
@@ -259,15 +289,25 @@ export async function mountDrill(
   }
 
   async function moveArm(toPx: number, ms: number, easing: string): Promise<void> {
-    const from = clawArm.style.transform || 'translateY(0px)';
-    const anim = clawArm.animate([{ transform: from }, { transform: `translateY(${toPx}px)` }], {
+    // Head translates; the braided cable stretches to match (scaleY about its
+    // top edge — the method claw.svg declares it survives).
+    const fromArm = clawArm.style.transform || 'translateY(0px)';
+    const fromCable = clawCable.style.transform || 'scaleY(1)';
+    const scale = (CABLE_LEN + toPx) / CABLE_LEN;
+    const cableAnim = clawCable.animate(
+      [{ transform: fromCable }, { transform: `scaleY(${scale})` }],
+      { duration: ms, easing, fill: 'forwards' },
+    );
+    const anim = clawArm.animate([{ transform: fromArm }, { transform: `translateY(${toPx}px)` }], {
       duration: ms,
       easing,
       fill: 'forwards',
     });
     await anim.finished.catch(() => undefined);
     clawArm.style.transform = `translateY(${toPx}px)`;
+    clawCable.style.transform = `scaleY(${scale})`;
     anim.cancel();
+    cableAnim.cancel();
   }
 
   async function animateGrab(slotIndex: number, prize: string): Promise<void> {
@@ -275,11 +315,16 @@ export async function mountDrill(
     const drop = armDropPx();
     await moveArm(drop, T.CLAW_DROP_MS, 'cubic-bezier(.5,0,1,1)');
     if (gen !== clawGen) return; // claw was reset for the next card meanwhile
+    // Fingers close around the prize (front pair in front, back finger behind).
     clawCarry.textContent = prize;
+    closeFingers();
+    await sleep(T.CLAW_CLOSE_MS);
+    if (gen !== clawGen) return;
     await moveArm(0, T.CLAW_RISE_MS, 'cubic-bezier(0,0,.5,1)');
     if (gen !== clawGen) return;
     const from = centerOf(clawCarry.getBoundingClientRect());
     clawCarry.textContent = '';
+    openFingers(); // release over the jar
     const slot = slotEls[slotIndex];
     const to = slot ? centerOf(slot.getBoundingClientRect()) : from;
     await flyText(prize, from, to, T.PRIZE_FLY_MS);
@@ -293,11 +338,15 @@ export async function mountDrill(
     await moveArm(drop, T.CLAW_DROP_MS, 'cubic-bezier(.5,0,1,1)');
     if (gen !== clawGen) return;
     clawCarry.textContent = teased;
+    closeFingers();
+    await sleep(T.CLAW_CLOSE_MS);
+    if (gen !== clawGen) return;
     await moveArm(drop * 0.45, T.CLAW_RISE_MS, 'cubic-bezier(0,0,.5,1)');
     if (gen !== clawGen) return;
-    // Classic heartbreak: it slips on the way up and tumbles back into the pit.
+    // Classic heartbreak: fingers re-open mid-hoist and it tumbles back.
     const from = centerOf(clawCarry.getBoundingClientRect());
     clawCarry.textContent = '';
+    openFingers();
     const pitR = pit.getBoundingClientRect();
     const to = { x: from.x + (Math.random() * 60 - 30), y: pitR.top + pitR.height * 0.55 };
     void flyText(teased, from, to, T.PRIZE_FALL_MS, true);
@@ -309,7 +358,7 @@ export async function mountDrill(
     if (!slot) return;
     const to = centerOf(slot.getBoundingClientRect());
     const jarR = jarEl.getBoundingClientRect();
-    await flyText(PEBBLE, { x: to.x, y: jarR.top - 24 }, to, T.PEBBLE_MS);
+    await flyText(pebbleNode('floater-pebble'), { x: to.x, y: jarR.top - 24 }, to, T.PEBBLE_MS);
     setSlot(slotIndex, 'pebble');
   }
 
@@ -324,7 +373,7 @@ export async function mountDrill(
       { duration: 700, easing: 'cubic-bezier(0,.6,.4,1)', fill: 'forwards' },
     );
     jarEl.classList.add('sealed');
-    jarLabel.textContent = `${deckName} — ${new Date().toLocaleDateString()} — ${slotEls.length}`;
+    jarLabelText.textContent = `${deckName} — ${new Date().toLocaleDateString()} — ${slotEls.length}`;
     jarLabel.hidden = false;
     jarLabel.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600, delay: 500, fill: 'forwards' });
   }
@@ -472,6 +521,8 @@ export async function mountDrill(
           break;
         case 'playTick':
           audio.playTick(eff.rate);
+          // Final-25% acceleration lights the claw's accent lamp.
+          if (eff.rate > 1) claw.classList.add('lamp-on');
           break;
         case 'playDing':
           audio.playDing();

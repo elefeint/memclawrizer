@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 124">
+  <!--
+    Asset D: prize-pit set dressing (docs/graphics-requirements.md §5).
+    All three groups stretch to the full window width (preserveAspectRatio
+    =none), so only gradients and full-bleed shapes. Emoji trinkets remain
+    code-scattered DOM between #pit-floor and #pit-glass.
+  -->
+  <defs>
+    <radialGradient id="pitDepth" cx="0.5" cy="0.15" r="1.1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.02"/>
+      <stop offset="0.6" stop-color="#000" stop-opacity="0.10"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0.30"/>
+    </radialGradient>
+    <linearGradient id="pitBackVert" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.22"/>
+      <stop offset="0.45" stop-color="#000" stop-opacity="0.04"/>
+      <stop offset="1" stop-color="#000" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="pitFloorShade" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#000" stop-opacity="0.18"/>
+      <stop offset="0.5" stop-color="#000" stop-opacity="0.06"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0.05"/>
+    </linearGradient>
+    <linearGradient id="pitStreak" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#fff" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#fff" stop-opacity="0.08"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+
+  <!-- cabinet interior back wall with radial depth shadow -->
+  <g id="pit-back" data-viewbox="0 0 100 100">
+    <rect x="0" y="0" width="100" height="100" fill="url(#pitBackVert)"/>
+    <rect x="0" y="0" width="100" height="100" fill="url(#pitDepth)"/>
+  </g>
+
+  <!-- surface strip the trinkets sit on; top edge is the contact shadow -->
+  <g id="pit-floor" data-viewbox="0 0 100 12">
+    <rect x="0" y="0" width="100" height="12" fill="url(#pitFloorShade)"/>
+    <rect x="0" y="0" width="100" height="1.2" fill="#000" opacity="0.12"/>
+  </g>
+
+  <!-- front glass reflection: diagonal streaks, <=8% opacity -->
+  <g id="pit-glass" data-viewbox="0 0 100 100">
+    <polygon points="22,0 34,0 12,100 4,100" fill="url(#pitStreak)"/>
+    <polygon points="40,0 45,0 25,100 21,100" fill="#fff" opacity="0.05"/>
+    <polygon points="78,0 83,0 66,100 62,100" fill="#fff" opacity="0.04"/>
+    <rect x="0" y="0" width="100" height="2" fill="#fff" opacity="0.06"/>
+  </g>
+</svg>
