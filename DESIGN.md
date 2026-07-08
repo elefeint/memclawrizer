@@ -112,6 +112,38 @@ single bad day with the loss of weeks of accumulated status, which turns the app
 into a source of dread; individually sealed jars accumulate monotonically and a bad
 day costs only that day's jar.
 
+### The trophy shelf at scale (denominational consolidation)
+
+Unbounded flat accumulation dilutes meaning (the 40th identical jar means less
+than the 4th — hedonic adaptation) and turns the shelf into noise. Instead the
+shelf uses **place-value consolidation**, per deck (Elena's idea: jars become
+positional, like an abacus of perfection):
+
+- Each deck gets its own shelf row. Within a row, sealed jars accumulate as
+  **singles** (up to nine loose); the **tenth** consolidates all ten into a
+  **ten-jar**; ten ten-jars consolidate into a **hundred-jar**. Read left to
+  right: hundreds, tens, then loose singles — an odometer of perfection.
+- A ten-jar is a jar **of** jars: the ten miniature silhouettes remain visible
+  inside the larger vessel. Consolidation must read as *promotion*, never
+  confiscation (specific jars are specific memories — endowment); the hover
+  label enumerates the contained sessions from the data.
+- The denomination numeral (10, 100) is embossed on the glass. This does not
+  violate the no-numbers rule: the taboo number is accuracy percentage;
+  counts of perfection are already labeled (card counts, dates).
+- The **tenth seal escalates**: when a new trophy completes a group of ten, a
+  one-time consolidation ceremony plays (the ten pour/slide into the larger
+  vessel) with a deeper variant of the seal chime — a rare, slow-cadence peak
+  on top of the per-session one. Still no streak mechanics: consolidation
+  only ever adds; a bad day costs nothing.
+- Every perfect session counts equally toward consolidation regardless of
+  card count (the currency stays pure; jar labels carry the size nuance). A
+  minimum-cards threshold is a possible future deck setting if tiny sessions
+  ever feel like farming.
+- Implementation: **pure renderer derivation** over `stats.trophies()` —
+  group by deck, sort chronologically, chunk by tens. No schema change, no
+  contract change. The ceremony is not persisted: if the app closes before it
+  plays, the next shelf render simply shows the consolidated state.
+
 **Timer duration** = deck's `base_timer_ms` × per-box multiplier (box 1: 1.5×,
 box 2: 1.25×, box 3: 1.0×, box 4: 0.85×, box 5: 0.7×). Higher boxes get tighter
 timers — mastery is speed, not just recall. Defaults: 7000 ms base for piano,
