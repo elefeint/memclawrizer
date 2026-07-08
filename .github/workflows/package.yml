@@ -1,0 +1,55 @@
+name: package
+
+# Cross-platform installers. Each OS must build natively: npm ci selects the
+# platform's @duckdb/node-bindings-* package, and the packageAfterCopy hook in
+# forge.config.ts ships whatever @duckdb scope the runner installed.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['v*']
+
+jobs:
+  package:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            name: linux-x64 # deb + rpm
+          - os: windows-latest
+            name: windows-x64 # Squirrel installer
+          - os: macos-latest
+            name: macos-arm64 # zip with the .app (unsigned)
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install Linux packaging tools
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y rpm xvfb
+
+      - run: npm ci
+
+      # Unit + DB tests on every OS: this is also the cross-platform proof for
+      # the DuckDB native addon and the generator goldens.
+      - run: npm test
+
+      - run: npm run make
+
+      # The Playwright smoke test drives the freshly packaged binary; it is
+      # Linux-path-specific and needs a display, hence xvfb and Linux-only.
+      - name: Smoke test packaged app
+        if: runner.os == 'Linux'
+        run: xvfb-run -a npm run test:e2e
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: memclawrizer-${{ matrix.name }}
+          path: out/make/**
+          if-no-files-found: error
+          retention-days: 30
