@@ -1,0 +1,13 @@
+# Byte-exact tests (packs fixtures, generator goldens) compare committed text
+# files against zip members, so working-tree line endings must be LF on every
+# platform — Windows CRLF checkout broke packs.test.ts in CI.
+* text=auto eol=lf
+
+# Never translate binary artifacts.
+*.deckpack binary
+*.duckdb binary
+*.png binary
+*.otf binary
+*.woff binary
+*.woff2 binary
+*.ico binary
