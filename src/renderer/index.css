@@ -229,21 +229,32 @@ button:hover {
   padding-bottom: 0.3rem;
 }
 
+/* Asset E: mini sealed jars on a drawn wood strip. */
 .trophy-shelf {
+  position: relative;
   display: flex;
   flex-wrap: wrap;
   gap: 0.9rem;
   align-items: flex-end;
   min-height: 3rem;
-  padding: 0.4rem 0.2rem 0.8rem;
-  border-bottom: 6px solid var(--cabinet-edge);
+  padding: 0.4rem 0.2rem 12px;
+}
+
+.shelf-strip {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 10px;
+  pointer-events: none;
 }
 
 .trophy-jar {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
+  width: 56px;
+  height: 64px;
   cursor: default;
+  filter: drop-shadow(0 0 5px color-mix(in srgb, var(--good) 35%, transparent));
 }
 
 .trophy-jar:focus-visible {
@@ -252,29 +263,24 @@ button:hover {
   border-radius: 6px;
 }
 
-.trophy-lid {
-  width: 34px;
-  height: 8px;
-  border-radius: 4px 4px 2px 2px;
-  background: linear-gradient(to bottom, var(--steel), var(--rail));
-  margin-bottom: -2px;
-  z-index: 1;
+.trophy-mini {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
+/* prize glyphs live between #mini-back and #mini-front */
 .trophy-glass {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 14px;
+  bottom: 6px;
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   place-items: center;
-  width: 48px;
-  min-height: 44px;
-  padding: 3px;
   font-size: 11px;
   line-height: 1.15;
-  border: 2px solid var(--jar-line);
-  border-top-width: 1px;
-  border-radius: 4px 4px 10px 10px;
-  background: var(--glass);
-  box-shadow: 0 0 10px color-mix(in srgb, var(--good) 30%, transparent);
 }
 
 /* ------------------------------------------------------------ drill ----- */
@@ -290,7 +296,7 @@ button:hover {
 }
 
 .rail-wrap {
-  flex: 0 0 96px;
+  flex: 0 0 124px; /* claw head (64px) hangs fully inside the band */
   position: relative;
   border-bottom: 2px solid var(--cabinet-edge);
 }
@@ -306,43 +312,129 @@ button:hover {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.25);
 }
 
+/* ---- Asset B: the articulated claw (see assets/claw.svg for pivots) ---- */
+
 .claw {
   position: absolute;
-  top: 2px;
+  top: 0;
   left: 0;
-  width: 46px;
+  width: 64px;
+  height: 124px;
+  will-change: transform;
+}
+
+.claw-trolley {
+  position: absolute;
+  top: 9px;
+  left: 0;
+  width: 64px;
+  height: 24px;
+}
+
+.claw-cable-svg {
+  position: absolute;
+  top: 30px;
+  left: 26px;
+  width: 12px;
+  height: 28px;
+  transform-origin: 50% 0; /* code stretches it with scaleY during the drop */
   will-change: transform;
 }
 
 .claw-arm {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: absolute;
+  top: 56px;
+  left: 0;
+  width: 64px;
+  height: 64px;
   will-change: transform;
 }
 
-.claw-cable {
-  width: 3px;
-  height: 22px;
-  background: var(--steel);
+.claw-head-back,
+.claw-head-front {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
-.claw-head svg {
-  display: block;
-  fill: none;
-  stroke: var(--steel);
-  stroke-width: 4;
-  stroke-linecap: round;
-}
-
+/* carry-anchor declared in claw.svg: 32,36 (head space); the carried prize
+   paints between #finger-back and the hub + front-finger layer. */
 .claw-carry {
   position: absolute;
-  top: 44px;
-  left: 50%;
-  transform: translateX(-50%);
+  left: 32px;
+  top: 36px;
+  transform: translate(-50%, -50%);
   font-size: 20px;
   line-height: 1;
+}
+
+/* Fingers are authored OPEN; .fingers-closed rotates them about the pivots
+   declared in claw.svg. Transform-only — the travel must never jank. */
+#finger-left,
+#finger-right,
+#finger-back {
+  transform-box: view-box;
+  transition: transform 130ms cubic-bezier(0.4, 0, 0.6, 1); /* = CLAW_CLOSE_MS */
+}
+
+#finger-left {
+  transform-origin: 25px 12px;
+}
+
+#finger-right {
+  transform-origin: 39px 12px;
+}
+
+#finger-back {
+  transform-origin: 32px 11px;
+}
+
+.claw.fingers-closed #finger-left {
+  transform: rotate(-22deg);
+}
+
+.claw.fingers-closed #finger-right {
+  transform: rotate(22deg);
+}
+
+.claw.fingers-closed #finger-back {
+  transform: rotate(6deg);
+}
+
+/* Trolley wheels spin while the claw travels the rail. */
+@keyframes claw-wheel-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.claw.travelling #wheel-left,
+.claw.travelling #wheel-right {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: claw-wheel-spin 900ms linear infinite;
+}
+
+/* Accent lamp lights during the final-25% tick acceleration. */
+#lamp-dome {
+  fill: var(--lamp-fill, var(--steel));
+}
+
+@keyframes lamp-pulse {
+  from {
+    opacity: 0.18;
+  }
+  to {
+    opacity: 0.55;
+  }
+}
+
+.claw.lamp-on {
+  --lamp-fill: var(--accent);
+}
+
+.claw.lamp-on #lamp-glow {
+  animation: lamp-pulse 300ms ease-in-out infinite alternate;
 }
 
 .drill-body {
@@ -478,12 +570,19 @@ button:hover {
   padding-top: 0.4rem;
 }
 
+/* Asset A: layered slightly-3D jar. The CSS border stays the crisp outline
+   (a stretched SVG stroke would distort); glass shading/speculars come from
+   the injected #jar-back / #jar-front / #jar-rim layers. */
 .jar-lid {
-  height: 16px;
-  border-radius: 8px 8px 3px 3px;
-  background: linear-gradient(to bottom, var(--steel), var(--rail));
+  height: 18px;
   margin-bottom: -3px;
   z-index: 1;
+}
+
+.jar-lid-svg {
+  display: block;
+  width: 100%;
+  height: 100%;
 }
 
 .jar {
@@ -491,14 +590,26 @@ button:hover {
   border: 2px solid var(--jar-line);
   border-top-width: 1px;
   border-radius: 8px 8px 18px 18px;
-  background: var(--glass);
-  box-shadow: inset 0 -14px 22px -14px rgba(0, 0, 0, 0.25);
+  overflow: hidden; /* the stretched glass layers stay inside the silhouette */
+}
+
+.jar-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.jar-rim-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 12px;
+  pointer-events: none;
 }
 
 .jar.sealed {
-  box-shadow:
-    inset 0 -14px 22px -14px rgba(0, 0, 0, 0.25),
-    0 0 18px color-mix(in srgb, var(--good) 45%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--good) 45%, transparent);
   border-color: var(--good);
 }
 
@@ -518,18 +629,39 @@ button:hover {
   border: 1.5px dashed color-mix(in srgb, var(--jar-line) 55%, transparent);
 }
 
-.jar-slot.pebble {
-  color: light-dark(#8d8d8d, #6c6c74);
-  font-size: 20px;
+/* Asset C: the drawn pebble — a matte absence among the prizes. */
+.jar-slot.pebble svg {
+  width: 20px;
+  height: 20px;
+  display: block;
 }
 
+.floater svg {
+  width: 22px;
+  height: 22px;
+  display: block;
+}
+
+/* Asset A: paper label plate; text sits inside its declared safe box. */
 .jar-label {
+  position: relative;
   margin-top: 0.5rem;
+  padding: 0.45rem 0.8rem;
   font-size: 0.75rem;
   font-family: ui-monospace, monospace;
-  color: var(--muted);
+  color: #4a4438; /* ink on the cream paper plate, both themes */
   text-align: center;
-  max-width: 180px;
+  max-width: 200px;
+}
+
+.jar-label-plate {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.jar-label-text {
+  position: relative;
 }
 
 /* -------------------------------------------------------------- pit ----- */
@@ -549,16 +681,20 @@ button:hover {
   filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.25));
 }
 
-.pit-glass {
+/* Asset D: pit set dressing — back wall, floor strip, glass reflection. */
+.pit-layer {
   position: absolute;
   inset: 0;
   pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent 30%,
-    light-dark(rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.05)) 38%,
-    transparent 46%
-  );
+}
+
+.pit-floor-svg {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 46px;
+  pointer-events: none;
 }
 
 .floater {
