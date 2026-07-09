@@ -263,8 +263,8 @@ button:hover {
 .shelf-strip {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
+  width: 100%; /* replaced element: explicit width, not left/right */
   height: 10px;
   pointer-events: none;
 }
