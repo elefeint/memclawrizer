@@ -52,8 +52,9 @@ describe('mock api session semantics', () => {
     expect(r.sessionEnd?.perfect).toBe(false);
     expect(r.sessionEnd?.jar).toEqual(['🦆', '🎲', null, '🌵']);
 
-    // No trophy for imperfect sessions.
-    expect(await api.stats.trophies()).toHaveLength(0);
+    // No trophy for imperfect sessions (seeds aside — see seedTrophies()).
+    const earned = (await api.stats.trophies()).filter((t) => !t.sessionId.startsWith('seed-'));
+    expect(earned).toHaveLength(0);
   });
 
   it('seals a perfect session onto the trophy shelf', async () => {
@@ -65,9 +66,13 @@ describe('mock api session semantics', () => {
     expect(r.sessionEnd?.perfect).toBe(true);
     expect(r.sessionEnd?.jar).toEqual(['🏆']);
 
+    // Newest first: the fresh trophy leads; deterministic seeds sit behind.
     const trophies = await api.stats.trophies();
-    expect(trophies).toHaveLength(1);
     expect(trophies[0].deckId).toBe('mock-piano');
     expect(trophies[0].jar).toEqual(['🏆']);
+    const earned = trophies.filter((t) => !t.sessionId.startsWith('seed-'));
+    expect(earned).toHaveLength(1);
+    // The seeds make one perfect piano run the TENTH — the consolidation demo.
+    expect(trophies.filter((t) => t.deckId === 'mock-piano')).toHaveLength(10);
   });
 });

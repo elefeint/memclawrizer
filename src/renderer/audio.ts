@@ -82,3 +82,19 @@ export function playSealChime(): void {
     blip(f * 2, 'sine', 0.08, 0.01, 0.6, i * 0.14);
   });
 }
+
+/**
+ * The consolidation chime — exclusive to the tenth-seal ceremony (ten jars
+ * pouring into a denomination vessel). The seal chime's bigger sibling: an
+ * octave down, slower cadence, longer ring, over a deep C3 root. The
+ * ordinary seal chime stays exclusive to ordinary seals.
+ */
+export function playConsolidationChime(): void {
+  blip(130.81, 'sine', 0.42, 0.02, 2.4); // C3 root
+  blip(130.81 * 2.003, 'sine', 0.12, 0.02, 1.8); // slow beat against the root
+  const notes = [261.63, 329.63, 392.0, 523.25]; // C4 E4 G4 C5
+  notes.forEach((f, i) => {
+    blip(f, 'sine', 0.3, 0.015, 1.7, 0.28 + i * 0.24);
+    blip(f * 2, 'sine', 0.07, 0.015, 1.1, 0.28 + i * 0.24);
+  });
+}

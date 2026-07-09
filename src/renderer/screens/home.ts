@@ -1,14 +1,32 @@
 /**
  * Home screen (F3): deck list (due/new counts, box mini-bar, drill,
  * drill-by-tag, export, settings), global import, and the trophy shelf —
- * sealed jars from perfect sessions, newest first. Keyboard-only friendly:
- * everything is native buttons/inputs/details.
+ * per-deck odometer rows with place-value consolidation (DESIGN.md "The
+ * trophy shelf at scale"): hundreds → tens → loose singles. Keyboard-only
+ * friendly: everything is native buttons/inputs/details.
  */
 import { api } from '../api';
 import { TESTIDS } from '../../shared/testids';
 import type { DeckSummary, TrophyView } from '../../shared/api';
 import { ASSETS, svgLayer } from '../svg-assets';
+import { consolidationEvent, deriveShelf, type DeckShelfRow, type DenominationJar } from '../shelf';
+import * as audio from '../audio';
+import * as T from '../timings';
 import type { Nav } from './drill';
+
+/**
+ * Ceremony detection (documented choice): a same-session diff of per-deck
+ * trophy counts across home renders. Module-level, deliberately NOT
+ * persisted — the first render of an app run only takes a baseline, so a
+ * consolidation that happened before a restart simply shows as the already-
+ * consolidated shelf, exactly as DESIGN.md specifies.
+ */
+const lastSeenTrophyCounts = new Map<string, number>();
+let trophyBaselineTaken = false;
+
+function fmtDay(iso: string): string {
+  return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
 
 function el<K extends keyof HTMLElementTagNameMap>(
   tag: K,
@@ -217,23 +235,166 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
     for (const deck of decks) list.appendChild(deckRow(deck));
   }
 
-  async function refreshShelf(): Promise<void> {
-    const trophies = await api.stats.trophies();
-    shelf.innerHTML = '';
-    // The wood strip the minis sit on (Asset E #shelf), stretched full width.
-    shelf.appendChild(
+  /** A ten-jar or hundred-jar: the vessel with its contents visible inside. */
+  function denomJar(row: DeckShelfRow, jar: DenominationJar): HTMLElement {
+    const d = el('div', `denom-jar denom-${jar.denomination}`);
+    d.tabIndex = 0; // hover AND keyboard-focus reveal the label
+    const first = jar.trophies[0];
+    const last = jar.trophies[jar.trophies.length - 1];
+    d.title =
+      jar.denomination === 10
+        ? // Endowment: the ten contained sessions stay enumerable.
+          `${row.deckName} — ten perfect sessions: ` +
+          jar.trophies.map((t) => `${fmtDay(t.endedAtIso)} (${t.size})`).join(', ')
+        : `${row.deckName} — one hundred perfect sessions, ` +
+          `${fmtDay(first.endedAtIso)} – ${fmtDay(last.endedAtIso)}`;
+    d.appendChild(
+      svgLayer(
+        ASSETS.miniJar,
+        [
+          'denom-back',
+          'denom-contents',
+          'denom-front',
+          jar.denomination === 100 ? 'numeral-100' : 'numeral-10',
+        ],
+        { className: 'denom-svg' },
+      ),
+    );
+    return d;
+  }
+
+  interface RowRefs {
+    el: HTMLElement;
+    newestTen: HTMLElement | null;
+    newestHundred: HTMLElement | null;
+  }
+
+  /** One deck's odometer row: hundreds → tens → singles, on its own strip. */
+  function shelfRow(row: DeckShelfRow): RowRefs {
+    const wrap = el('div', 'shelf-row');
+    const name = el('span', 'shelf-row-name');
+    name.textContent = row.deckName;
+    const jars = el('div', 'shelf-row-jars');
+    let newestHundred: HTMLElement | null = null;
+    let newestTen: HTMLElement | null = null;
+    for (const h of row.hundreds) {
+      newestHundred = denomJar(row, h);
+      jars.appendChild(newestHundred);
+    }
+    for (const t of row.tens) {
+      newestTen = denomJar(row, t);
+      jars.appendChild(newestTen);
+    }
+    for (const t of row.singles) jars.appendChild(trophyJar(t));
+    wrap.append(
+      name,
+      jars,
       svgLayer(ASSETS.miniJar, ['shelf'], { className: 'shelf-strip', stretch: true }),
     );
-    if (trophies.length === 0) {
+    return { el: wrap, newestTen, newestHundred };
+  }
+
+  let ceremonyTimer: number | undefined;
+
+  /**
+   * The tenth-seal ceremony: ten ghost jars pour/slide into the (already
+   * rendered) denomination vessel, under the deep consolidation chime.
+   * One-shot, unpersisted, transform/opacity only.
+   */
+  function ceremony(rowEl: HTMLElement, vessel: HTMLElement): void {
+    vessel.classList.add('consolidating'); // hidden until the pour lands
+    audio.playConsolidationChime();
+    const rowRect = rowEl.getBoundingClientRect();
+    const vRect = vessel.getBoundingClientRect();
+    const toX = vRect.left - rowRect.left + vRect.width / 2;
+    const toY = vRect.top - rowRect.top + vRect.height / 2;
+    for (let i = 0; i < 10; i++) {
+      const ghost = el('div', 'ghost-jar');
+      ghost.appendChild(svgLayer(ASSETS.miniJar, ['mini-back', 'mini-front'], {}));
+      // Spread the ten along the row, where the singles just stood.
+      const fromX = toX + 46 + i * 32;
+      const fromY = toY - 8 + (i % 2) * 10;
+      rowEl.appendChild(ghost);
+      ghost.animate(
+        [
+          { transform: `translate(${fromX}px, ${fromY}px) translate(-50%, -50%)`, opacity: 0.9 },
+          {
+            transform: `translate(${toX}px, ${toY}px) translate(-50%, -50%) scale(0.4)`,
+            opacity: 0,
+          },
+        ],
+        {
+          duration: T.CONSOLIDATE_GHOST_MS,
+          delay: i * T.CONSOLIDATE_STAGGER_MS,
+          easing: 'cubic-bezier(.5,0,.8,1)',
+          fill: 'both',
+        },
+      ).finished.then(
+        () => ghost.remove(),
+        () => ghost.remove(),
+      );
+    }
+    const landAt = T.CONSOLIDATE_GHOST_MS + 9 * T.CONSOLIDATE_STAGGER_MS;
+    ceremonyTimer = window.setTimeout(() => {
+      if (!screen.isConnected) return;
+      vessel.classList.remove('consolidating');
+      vessel.animate(
+        [
+          { transform: 'scale(1.14)', opacity: 0 },
+          { transform: 'scale(1)', opacity: 1 },
+        ],
+        { duration: T.CONSOLIDATE_POP_MS, easing: 'cubic-bezier(0,.6,.4,1)' },
+      );
+    }, landAt);
+  }
+
+  async function refreshShelf(): Promise<void> {
+    const trophies = await api.stats.trophies();
+    const rows = deriveShelf(trophies);
+    shelf.innerHTML = '';
+
+    // Detect boundary crossings BEFORE updating the session baseline.
+    const events: { deckId: string; denom: 10 | 100 }[] = [];
+    for (const row of rows) {
+      const prev = lastSeenTrophyCounts.get(row.deckId) ?? 0;
+      if (trophyBaselineTaken) {
+        const denom = consolidationEvent(prev, row.total);
+        if (denom) events.push({ deckId: row.deckId, denom });
+      }
+      lastSeenTrophyCounts.set(row.deckId, row.total);
+    }
+    trophyBaselineTaken = true;
+
+    if (rows.length === 0) {
+      shelf.appendChild(
+        svgLayer(ASSETS.miniJar, ['shelf'], { className: 'shelf-strip', stretch: true }),
+      );
       const empty = el('p', 'shelf-empty');
       empty.textContent = 'perfect sessions live here';
       shelf.appendChild(empty);
       return;
     }
-    for (const t of trophies) shelf.appendChild(trophyJar(t));
+
+    const refs = new Map<string, RowRefs>();
+    for (const row of rows) {
+      const r = shelfRow(row);
+      refs.set(row.deckId, r);
+      shelf.appendChild(r.el);
+    }
+
+    // At most one ceremony per render (overlapping chimes would mush).
+    const ev = events[0];
+    if (ev) {
+      const r = refs.get(ev.deckId);
+      const vessel = ev.denom === 100 ? r?.newestHundred : r?.newestTen;
+      if (r && vessel) ceremony(r.el, vessel);
+    }
   }
 
   await Promise.all([refreshDecks(), refreshShelf()]);
 
-  return () => screen.remove();
+  return () => {
+    if (ceremonyTimer !== undefined) window.clearTimeout(ceremonyTimer);
+    screen.remove();
+  };
 }

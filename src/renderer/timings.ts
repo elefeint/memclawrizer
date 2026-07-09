@@ -34,6 +34,12 @@ export const PRIZE_FALL_MS = 420;
 /** Stagger between prizes when the jar empties into the pit. */
 export const EMPTY_STAGGER_MS = 70;
 
+/** Tenth-seal consolidation ceremony: each ghost jar's slide into the
+ * vessel, the stagger between the ten, and the vessel's landing pop. */
+export const CONSOLIDATE_GHOST_MS = 520;
+export const CONSOLIDATE_STAGGER_MS = 90;
+export const CONSOLIDATE_POP_MS = 420;
+
 /**
  * TICK cadence fallback alongside requestAnimationFrame. rAF freezes when the
  * window is occluded/minimized; a plain interval keeps the machine's clock —
