@@ -109,3 +109,15 @@ requests go in the section below.
   16.8ms in the dark run). data-testids and jar-slot .prize/.pebble classes
   untouched, but please re-run `npm run test:e2e` against a fresh package
   before release (not runnable from this worktree). 117 tests + lint green.
+- 2026-07-08 [frontend] Denominational trophy shelf done (DESIGN.md "The
+  trophy shelf at scale"). Pure derivation in src/renderer/shelf.ts
+  (deriveShelf + consolidationEvent, 22 unit tests incl. 0/9/10/11/99/100/
+  101/113, multi-deck, oldest-ten stability); per-deck odometer rows in
+  home.ts; denomination vessel + embossed 10/100 numerals (drawn geometry)
+  added to jar-mini.svg; playConsolidationChime in audio.ts (exclusive to
+  the ceremony). Ceremony detection = same-session per-deck count diff
+  across home renders, module-level baseline, unpersisted by design.
+  mock-api.ts seeds 9 piano trophies (one perfect run = ceremony) + 113
+  for a trophies-only 'mock-legacy' row (hundred + ten + 3 singles).
+  Verified over CDP in both themes: seeded shelf, mid-ceremony pour,
+  consolidated after-state, hundred-jar. 139 tests + lint green.

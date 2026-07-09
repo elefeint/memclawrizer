@@ -93,9 +93,45 @@ interface MockSession {
   ended: boolean;
 }
 
+/**
+ * Deterministic trophy seeds (sessionId prefix 'seed-') so the shelf's
+ * denominational consolidation is exercisable under start:mock:
+ *  - 'mock-piano' gets 9: its 1-card deck means ONE perfect run completes a
+ *    ten and fires the consolidation ceremony;
+ *  - 'mock-legacy' (a trophies-only pseudo-deck, no cards) gets 113:
+ *    1 hundred-jar + 1 ten-jar + 3 singles on first render.
+ */
+function seedTrophies(): TrophyView[] {
+  const seeds: TrophyView[] = [];
+  const day = (base: string, i: number): string =>
+    new Date(Date.parse(base) + i * 86_400_000).toISOString();
+  for (let i = 0; i < 9; i++) {
+    seeds.push({
+      sessionId: `seed-piano-${i}`,
+      deckId: 'mock-piano',
+      deckName: 'Mock piano (1 card)',
+      endedAtIso: day('2026-06-20T09:00:00Z', i),
+      size: 1,
+      jar: ['🎁'],
+    });
+  }
+  for (let i = 0; i < 113; i++) {
+    seeds.push({
+      sessionId: `seed-legacy-${i}`,
+      deckId: 'mock-legacy',
+      deckName: 'Mock legacy (seeded)',
+      endedAtIso: day('2026-03-01T09:00:00Z', i),
+      size: (i % 7) + 2,
+      jar: ['⭐'],
+    });
+  }
+  // stats.trophies() convention is newest first.
+  return seeds.reverse();
+}
+
 export function createMockApi(): Api {
   const sessions = new Map<string, MockSession>();
-  const trophies: TrophyView[] = [];
+  const trophies: TrophyView[] = seedTrophies();
   let sessionCounter = 0;
 
   const toView = (s: MockSession, e: QueueEntry): CardView => ({

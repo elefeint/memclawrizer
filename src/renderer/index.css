@@ -229,24 +229,90 @@ button:hover {
   padding-bottom: 0.3rem;
 }
 
-/* Asset E: mini sealed jars on a drawn wood strip. */
+/* Asset E: mini sealed jars on drawn wood strips — one odometer row per
+   deck (hundreds → tens → singles). */
 .trophy-shelf {
   position: relative;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.9rem;
-  align-items: flex-end;
+  flex-direction: column;
+  gap: 1.1rem;
   min-height: 3rem;
-  padding: 0.4rem 0.2rem 12px;
+}
+
+.shelf-row {
+  position: relative;
+  padding: 0 0.2rem 12px;
+}
+
+.shelf-row-name {
+  display: block;
+  font-size: 0.72rem;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+  margin-bottom: 0.25rem;
+}
+
+.shelf-row-jars {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.9rem;
 }
 
 .shelf-strip {
   position: absolute;
   left: 0;
-  right: 0;
   bottom: 0;
+  width: 100%; /* replaced element: explicit width, not left/right */
   height: 10px;
   pointer-events: none;
+}
+
+/* Denomination vessel (ten-jar / hundred-jar), legible at 72-96px. */
+.denom-jar {
+  position: relative;
+  width: 84px;
+  height: 91px; /* 96:104 aspect */
+  cursor: default;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--good) 40%, transparent));
+}
+
+.denom-jar.denom-100 {
+  width: 96px;
+  height: 104px;
+}
+
+.denom-jar:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 8px;
+}
+
+.denom-svg {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* During the ceremony the vessel waits invisibly for the pour to land. */
+.denom-jar.consolidating {
+  opacity: 0;
+}
+
+.ghost-jar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 34px;
+  pointer-events: none;
+  will-change: transform, opacity;
+}
+
+.ghost-jar svg {
+  width: 100%;
+  height: 100%;
 }
 
 .trophy-jar {
