@@ -150,4 +150,5 @@ test-results/
 playwright-report/
 
 # Claude Code session dirs (agent worktrees live here)
-.claude/
+.claude/*
+!.claude/skills/
