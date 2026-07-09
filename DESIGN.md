@@ -248,6 +248,18 @@ media/
   an "include state" export can be added later if ever needed).
 - `format_version` gates the importer the same way schema_version gates the DB:
   newer app reads old packs; old app refuses new packs.
+- **Format v2 (2026-07-08): answer-side audio.** A card may carry
+  `"answer_media": "media/shi.ogg"` — an audio file played during the
+  feedback/grab phase after the attempt, for BOTH outcomes (hearing the
+  syllable at the moment of feedback attaches sound to symbol exactly when
+  memory is most receptive — same principle as the mnemonic-at-failure).
+  Importer accepts v1 and v2; v2 adds `cards.answer_media_id` via DB
+  migration v2. Exposed to the renderer as `AnswerResult.answerMediaUrl`
+  (never in `CardView` — audible answers must not leak before the attempt).
+  Kana audio is committed under `scripts/audio/kana/` and embedded by
+  `gen-kana.ts`; synthesis/downloading is a one-time authoring step
+  (`scripts/gen-kana-audio.ts`), never a build dependency, so goldens and CI
+  stay deterministic.
 - Media type is inferred from file extension/MIME; audio prompts need zero new
   engine work when they arrive — a card with an `.ogg` in `media/` just works
   (renderer already branches on prompt type).

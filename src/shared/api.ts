@@ -86,6 +86,14 @@ export interface AnswerResult {
   expected: string[] | null;
   /** Mnemonic to show with the failure feedback, when the card has one. */
   hint: string | null;
+  /**
+   * Answer-side audio (e.g. the spoken syllable), set when the card has it —
+   * played during the feedback/grab phase for BOTH outcomes. Same opaque URL
+   * scheme as CardView.mediaUrl; load via <audio>, never fetch(). Optional:
+   * absent from older backends. (Contract change #1, coordinator-approved
+   * 2026-07-08 — additive.)
+   */
+  answerMediaUrl?: string | null;
   slotIndex: number;
   next: CardView | null;
   /** Cards still to clear, including re-queued ones. */

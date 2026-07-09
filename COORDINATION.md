@@ -36,6 +36,26 @@ requests go in the section below.
 
 ## Contract change requests
 (append here: what / why / which types; coordinator approves; additive only)
+- 2026-07-08 [coordinator] Change #1 APPROVED and applied: `AnswerResult`
+  gains optional `answerMediaUrl?: string | null` — answer-side audio
+  (spoken syllable) played during feedback/grab for both outcomes.
+  Deliberately NOT on CardView (would leak the answer before the attempt).
+  Additive; older backends simply never set it.
+
+## New milestones (2026-07-08): answer-side audio (pack format v2)
+- [ ] B6 [backend]: PACK_FORMAT_VERSION=2 accepting v1+v2; optional card
+      `answer_media` (audio, path-validated); DB migration v2 adds
+      `cards.answer_media_id`; import/export round-trip; sessions set
+      `answerMediaUrl` on every AnswerResult for cards that have it;
+      `scripts/gen-kana-audio.ts` one-time authoring script (TTS/downloads,
+      NOT a build dep) writing committed `scripts/audio/kana/*.ogg`;
+      `gen-kana.ts` embeds them when present (both syllabaries share files);
+      goldens updated; v1-fixture migration test.
+- [ ] F6 [frontend]: drill-machine emits a `playAnswerAudio(url)` effect on
+      RESULT when `answerMediaUrl` present (both outcomes, during
+      feedback/grab); DOM layer plays via <audio> element (mem:// fetch()
+      fails by scheme — element loading only); mock gains a data:-URI wav on
+      one card; unit tests for the effect; CDP-verify audible path exists.
 
 ## Dependency requests
 (Frontend appends here; Backend installs and commits)
