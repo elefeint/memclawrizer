@@ -13,7 +13,7 @@ import { mkdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildDeckJson, zipPack, PackJsonCard } from '../src/main/packs';
 
-interface KanaEntry {
+export interface KanaEntry {
   /** Stable card id suffix; usually the primary romaji (nihon-shiki where
    * Hepburn collides: di=ぢ, du=づ). */
   id: string;
@@ -29,7 +29,8 @@ const K = (id: string, hira: string, answers: string[], tags: string[]): KanaEnt
   id, hira, answers, tags,
 });
 
-const TABLE: KanaEntry[] = [
+/** Exported for gen-kana-audio.ts (one ogg per unique entry id). */
+export const TABLE: KanaEntry[] = [
   // -- gojūon (46) --
   K('a', 'あ', ['a'], ['a-row']),
   K('i', 'い', ['i'], ['a-row']),
