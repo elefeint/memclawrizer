@@ -202,6 +202,11 @@ export class SessionManager {
       isFirstOfSession,
       expected: outcome === 'correct' ? null : [...entry.card.answers],
       hint: outcome === 'correct' ? null : entry.card.hint,
+      // Answer-side audio (format v2): plays during feedback/grab for BOTH
+      // outcomes, retries included — sound attaches to symbol at the moment
+      // of feedback. Never exposed in CardView (must not leak pre-attempt).
+      answerMediaUrl:
+        entry.card.answerMediaId === null ? null : mediaUrlFor(entry.card.answerMediaId),
       slotIndex: entry.slotIndex,
       next: s.queue.length > 0 ? this.toView(s, s.queue[0]) : null,
       remaining: s.queue.length,
