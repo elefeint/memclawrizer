@@ -113,6 +113,14 @@ export type Effect =
   | { type: 'animateSeal'; jar: (string | null)[] }
   | { type: 'animateEmpty'; jar: (string | null)[] }
   | { type: 'showFeedback'; expected: string[]; hint: string | null }
+  /**
+   * Answer-side audio (the spoken syllable) at the resolution moment —
+   * emitted for BOTH outcomes, retries included, whenever the RESULT carries
+   * answerMediaUrl. DOM layer plays via an <audio> element (never fetch();
+   * mem:// is blocked for fetch by Chromium scheme rules) and stops any
+   * still-playing previous answer audio first.
+   */
+  | { type: 'playAnswerAudio'; url: string }
   | { type: 'submitAnswer'; req: AnswerRequest }
   | { type: 'sessionComplete'; end: SessionEnd }
   /** DOM layer must call api.session.abort(sessionId). */
@@ -276,6 +284,12 @@ export function reduce(state: DrillState, event: DrillEvent, deps: MachineDeps):
       const slots = [...state.slots];
       const effects: Effect[] = [];
       let phase: DrillPhase;
+
+      // Sound attaches to symbol at the moment of resolution: first effect of
+      // the grab/slip/feedback phase, both outcomes, retries included.
+      if (r.answerMediaUrl) {
+        effects.push({ type: 'playAnswerAudio', url: r.answerMediaUrl });
+      }
 
       if (r.outcome === 'correct') {
         effects.push({ type: 'playSuccessChirp' });

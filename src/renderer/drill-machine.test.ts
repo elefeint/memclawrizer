@@ -520,6 +520,76 @@ describe('tick acceleration', () => {
   });
 });
 
+describe('answer audio (F6)', () => {
+  const URL = 'data:audio/wav;base64,AAAA';
+
+  /** Run up to awaitingResult, then apply the given RESULT. */
+  function resolveWith(r: Partial<AnswerResult>): ReduceResult {
+    const d = deps();
+    const mid = run(
+      [
+        { type: 'START', session: sessionStart(card(), 2) },
+        { type: 'TICK', nowMs: 0 },
+        { type: 'SUBMIT', text: 'shi' },
+      ],
+      d,
+    );
+    return reduce(mid.state, { type: 'RESULT', result: result(r) }, d);
+  }
+
+  it('emits playAnswerAudio FIRST on a correct result carrying the url', () => {
+    const r = resolveWith({
+      outcome: 'correct',
+      isFirstOfSession: true,
+      answerMediaUrl: URL,
+      next: card({ cardId: 'ka', slotIndex: 1 }),
+      remaining: 1,
+    });
+    expect(r.effects[0]).toEqual({ type: 'playAnswerAudio', url: URL });
+    expect(effectTypes(r.effects)).toEqual(['playAnswerAudio', 'playSuccessChirp', 'animateGrab']);
+  });
+
+  it('emits it on wrong/timeout results too (the feedback moment)', () => {
+    const r = resolveWith({
+      outcome: 'wrong',
+      isFirstOfSession: true,
+      expected: ['shi'],
+      answerMediaUrl: URL,
+      next: card({ cardId: 'shi', isRetry: true }),
+      remaining: 2,
+    });
+    expect(effectTypes(r.effects)).toEqual([
+      'playAnswerAudio',
+      'animatePebble',
+      'showFeedback',
+    ]);
+  });
+
+  it('emits it on a retry clear (the slip) as well', () => {
+    const r = resolveWith({
+      outcome: 'correct',
+      isFirstOfSession: false,
+      answerMediaUrl: URL,
+      next: card({ cardId: 'ka', slotIndex: 1 }),
+      remaining: 1,
+    });
+    expect(effectTypes(r.effects)).toEqual(['playAnswerAudio', 'playSuccessChirp', 'animateSlip']);
+  });
+
+  it('does not emit when answerMediaUrl is absent or null', () => {
+    for (const answerMediaUrl of [undefined, null]) {
+      const r = resolveWith({
+        outcome: 'correct',
+        isFirstOfSession: true,
+        answerMediaUrl,
+        next: card({ cardId: 'ka', slotIndex: 1 }),
+        remaining: 1,
+      });
+      expect(effectTypes(r.effects)).toEqual(['playSuccessChirp', 'animateGrab']);
+    }
+  });
+});
+
 describe('pickPrize', () => {
   it('maps rng uniformly over the pool and clamps the edges', () => {
     expect(pickPrize(() => 0, POOL)).toBe('🦆');

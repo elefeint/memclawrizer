@@ -28,10 +28,62 @@ interface MockCard {
   promptType: PromptType;
   promptText: string | null;
   mediaUrl: string | null;
+  /** Answer-side audio played at resolution (F6); null = card has none. */
+  answerMediaUrl: string | null;
   answers: string[];
   hint: string | null;
   tags: string[];
 }
+
+/**
+ * A tiny valid 8-bit mono WAV as a data: URI — a 0.15s sine with a short
+ * fade, built in code so the mock ships no asset files. Distinct pitches per
+ * card make it audible WHICH card's answer fired during manual verification.
+ */
+function sineWavDataUri(freqHz: number): string {
+  const rate = 8000;
+  const n = Math.floor(rate * 0.15);
+  const bytes = new Uint8Array(44 + n);
+  const ascii = (offset: number, s: string) => {
+    for (let i = 0; i < s.length; i++) bytes[offset + i] = s.charCodeAt(i);
+  };
+  const u32 = (offset: number, v: number) => {
+    bytes[offset] = v & 0xff;
+    bytes[offset + 1] = (v >> 8) & 0xff;
+    bytes[offset + 2] = (v >> 16) & 0xff;
+    bytes[offset + 3] = (v >> 24) & 0xff;
+  };
+  const u16 = (offset: number, v: number) => {
+    bytes[offset] = v & 0xff;
+    bytes[offset + 1] = (v >> 8) & 0xff;
+  };
+  ascii(0, 'RIFF');
+  u32(4, 36 + n);
+  ascii(8, 'WAVE');
+  ascii(12, 'fmt ');
+  u32(16, 16);
+  u16(20, 1); // PCM
+  u16(22, 1); // mono
+  u32(24, rate);
+  u32(28, rate); // byte rate (8-bit mono)
+  u16(32, 1); // block align
+  u16(34, 8); // bits per sample
+  ascii(36, 'data');
+  u32(40, n);
+  for (let i = 0; i < n; i++) {
+    const fade = Math.min(1, (5 * (n - i)) / n, (10 * i) / n);
+    bytes[44 + i] = 128 + Math.round(96 * fade * Math.sin((2 * Math.PI * freqHz * i) / rate));
+  }
+  let bin = '';
+  for (let i = 0; i < bytes.length; i += 4096) {
+    bin += String.fromCharCode(...bytes.subarray(i, i + 4096));
+  }
+  return `data:audio/wav;base64,${btoa(bin)}`;
+}
+
+const SHI_WAV = sineWavDataUri(440);
+const KA_WAV = sineWavDataUri(660);
+const HARD_WAV = sineWavDataUri(880);
 
 interface MockDeck {
   id: string;
@@ -60,10 +112,10 @@ const DECKS: MockDeck[] = [
     description: 'Text prompts; includes an unguessable card to exercise failure paths.',
     settings: { baseTimerMs: 5000, newCardsPerSession: 5 },
     cards: [
-      { id: 'shi', promptType: 'text', promptText: 'し', mediaUrl: null, answers: ['shi', 'si'], hint: 'she has a fishing hook', tags: ['hiragana'] },
-      { id: 'ka', promptType: 'text', promptText: 'か', mediaUrl: null, answers: ['ka'], hint: null, tags: ['hiragana'] },
-      { id: 'n', promptType: 'text', promptText: 'ん', mediaUrl: null, answers: ['n'], hint: 'the only lone consonant', tags: ['hiragana'] },
-      { id: 'mock-hard', promptType: 'text', promptText: '🂠 (unguessable)', mediaUrl: null, answers: ['xyzzy'], hint: 'the magic word is xyzzy', tags: ['mock'] },
+      { id: 'shi', promptType: 'text', promptText: 'し', mediaUrl: null, answerMediaUrl: SHI_WAV, answers: ['shi', 'si'], hint: 'she has a fishing hook', tags: ['hiragana'] },
+      { id: 'ka', promptType: 'text', promptText: 'か', mediaUrl: null, answerMediaUrl: KA_WAV, answers: ['ka'], hint: null, tags: ['hiragana'] },
+      { id: 'n', promptType: 'text', promptText: 'ん', mediaUrl: null, answerMediaUrl: null, answers: ['n'], hint: 'the only lone consonant', tags: ['hiragana'] },
+      { id: 'mock-hard', promptType: 'text', promptText: '🂠 (unguessable)', mediaUrl: null, answerMediaUrl: HARD_WAV, answers: ['xyzzy'], hint: 'the magic word is xyzzy', tags: ['mock'] },
     ],
   },
   {
@@ -72,7 +124,7 @@ const DECKS: MockDeck[] = [
     description: 'One data:-SVG staff image; a perfect session is one answer away.',
     settings: { baseTimerMs: 7000, newCardsPerSession: 5 },
     cards: [
-      { id: 'treble-c4', promptType: 'image', promptText: null, mediaUrl: STAFF_SVG, answers: ['c4', 'c'], hint: 'one ledger line below the staff — middle C', tags: ['treble'] },
+      { id: 'treble-c4', promptType: 'image', promptText: null, mediaUrl: STAFF_SVG, answerMediaUrl: null, answers: ['c4', 'c'], hint: 'one ledger line below the staff — middle C', tags: ['treble'] },
     ],
   },
 ];
@@ -244,6 +296,8 @@ export function createMockApi(): Api {
           isFirstOfSession,
           expected: outcome === 'correct' ? null : [...entry.card.answers],
           hint: outcome === 'correct' ? null : entry.card.hint,
+          // Answer-side audio rides along for BOTH outcomes (F6).
+          answerMediaUrl: entry.card.answerMediaUrl,
           slotIndex: entry.slotIndex,
           next: s.queue.length > 0 ? toView(s, s.queue[0]) : null,
           remaining: s.queue.length,

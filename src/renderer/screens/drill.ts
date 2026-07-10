@@ -401,6 +401,21 @@ export async function mountDrill(
     });
   }
 
+  // -------------------------------------------------------- answer audio ----
+  // One reused element (F6): assigning a new src implicitly stops whatever
+  // was still playing from the previous card's resolution. <audio> element
+  // loading is the supported path for mem:// — fetch()/WebAudio-decode fails
+  // by Chromium scheme restriction. Deliberately no ducking: the ding and
+  // the spoken syllable coexisting is honest.
+  const answerAudio = new Audio();
+
+  function playAnswerAudio(url: string): void {
+    answerAudio.pause();
+    answerAudio.src = url;
+    answerAudio.currentTime = 0;
+    void answerAudio.play().catch(() => undefined);
+  }
+
   // ------------------------------------------------------------- prompt ----
   let audioPlayer: HTMLAudioElement | null = null;
 
@@ -548,6 +563,9 @@ export async function mountDrill(
           showFeedback(eff.expected, eff.hint);
           scheduleAnimationDone(T.FEEDBACK_MS);
           break;
+        case 'playAnswerAudio':
+          playAnswerAudio(eff.url);
+          break;
         case 'animateSeal':
           animateSeal();
           scheduleAnimationDone(T.SEAL_MS);
@@ -625,6 +643,8 @@ export async function mountDrill(
     if (animTimer !== undefined) window.clearTimeout(animTimer);
     if (exitTimer !== undefined) window.clearTimeout(exitTimer);
     window.removeEventListener('keydown', onKeyDown);
+    answerAudio.pause();
+    answerAudio.removeAttribute('src');
     for (const f of [...floaters]) f.remove();
     floaters.clear();
     screen.remove();

@@ -19,6 +19,8 @@ describe('mock api session semantics', () => {
     });
     expect(r.outcome).toBe('correct');
     expect(r.isFirstOfSession).toBe(true);
+    // F6: answer-side audio rides along as a data:-URI wav.
+    expect(r.answerMediaUrl).toMatch(/^data:audio\/wav;base64,/);
 
     // Card 2 correct.
     r = await api.session.answer(start.sessionId, {
@@ -32,6 +34,7 @@ describe('mock api session semantics', () => {
     expect(r.outcome).toBe('timeout');
     expect(r.expected).toEqual(['n']);
     expect(r.hint).toMatch(/consonant/);
+    expect(r.answerMediaUrl).toBeNull(); // ん has no answer audio in the mock
 
     // Card 4 correct.
     r = await api.session.answer(start.sessionId, {
