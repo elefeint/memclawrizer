@@ -28,7 +28,7 @@ import {
   upsertMedia,
 } from './queries';
 
-export const PACK_FORMAT_VERSION = 1;
+export const PACK_FORMAT_VERSION = 2;
 
 /**
  * Fixed zip mtime so identical content always produces identical bytes.
@@ -49,6 +49,8 @@ export interface PackCard {
   promptText: string | null;
   /** Path inside the pack, e.g. 'media/treble-c4.svg'. */
   mediaPath: string | null;
+  /** Format v2: audio played during post-attempt feedback, e.g. 'media/shi.ogg'. */
+  answerMediaPath: string | null;
   answers: string[];
   hint: string | null;
   tags: string[];
@@ -118,6 +120,17 @@ function parseCard(raw: unknown, where: string): PackCard {
     return s;
   });
 
+  // Format v2: optional answer-side audio (played during feedback, both
+  // outcomes). Must be an audio file; existence is checked when the pack's
+  // media is collected.
+  const answerMediaPath = optString(c.answer_media, `${where}.answer_media`);
+  if (answerMediaPath !== null && !AUDIO_EXTS.has(path.extname(answerMediaPath).toLowerCase())) {
+    fail(
+      `${where}.answer_media`,
+      `must be an audio file (${[...AUDIO_EXTS].join(', ')}); got ${JSON.stringify(answerMediaPath)}`,
+    );
+  }
+
   const tags =
     c.tags === undefined
       ? []
@@ -130,6 +143,7 @@ function parseCard(raw: unknown, where: string): PackCard {
     promptType: type,
     promptText,
     mediaPath,
+    answerMediaPath,
     answers: [...new Set(answers)],
     hint: optString(c.hint, `${where}.hint`),
     tags,
@@ -192,6 +206,9 @@ export function parsePackJson(text: string): ParsedPack {
 // ---------------------------------------------------------------------------
 // Reading a pack from disk (zip file or bare directory)
 
+/** Extensions accepted for answer_media (audio only, by design). */
+const AUDIO_EXTS = new Set(['.ogg', '.oga', '.mp3', '.wav']);
+
 const MIME_BY_EXT: Record<string, string> = {
   '.svg': 'image/svg+xml',
   '.png': 'image/png',
@@ -233,15 +250,17 @@ function collectMedia(
 ): Map<string, Uint8Array> {
   const media = new Map<string, Uint8Array>();
   for (const card of deck.cards) {
-    if (card.mediaPath === null || media.has(card.mediaPath)) continue;
-    mimeForMediaPath(card.mediaPath); // validates the extension
-    const bytes = readEntry(card.mediaPath);
-    if (bytes === null) {
-      throw new PackError(
-        `card "${card.id}" references ${card.mediaPath}, but the pack has no such file`,
-      );
+    for (const mediaPath of [card.mediaPath, card.answerMediaPath]) {
+      if (mediaPath === null || media.has(mediaPath)) continue;
+      mimeForMediaPath(mediaPath); // validates the extension
+      const bytes = readEntry(mediaPath);
+      if (bytes === null) {
+        throw new PackError(
+          `card "${card.id}" references ${mediaPath}, but the pack has no such file`,
+        );
+      }
+      media.set(mediaPath, bytes);
     }
-    media.set(card.mediaPath, bytes);
   }
   return media;
 }
@@ -333,7 +352,8 @@ export async function importPack(
         promptType: card.promptType,
         promptText: card.promptText,
         mediaId: card.mediaPath === null ? null : mediaIdFor(deck.id, card.mediaPath),
-        answerMediaId: null, // format v2 wiring lands with the pack-side changes
+        answerMediaId:
+          card.answerMediaPath === null ? null : mediaIdFor(deck.id, card.answerMediaPath),
         answers: card.answers,
         hint: card.hint,
         tags: card.tags,
@@ -360,6 +380,8 @@ export interface PackJsonCard {
   id: string;
   prompt: { type: PromptType; text?: string; media?: string };
   answers: string[];
+  /** Format v2: relative path to answer-side audio inside the pack. */
+  answer_media?: string;
   hint?: string;
   tags?: string[];
 }
@@ -408,20 +430,25 @@ export async function exportPack(
   const cards = await listCards(conn, deckId, { activeOnly: true });
 
   const files = new Map<string, Uint8Array>();
+
+  // media id is '<deck_id>/<path in pack>'; returns the in-pack path.
+  const collect = async (cardId: string, mediaId: string): Promise<string> => {
+    const mediaPath = mediaId.startsWith(`${deckId}/`)
+      ? mediaId.slice(deckId.length + 1)
+      : mediaId;
+    if (!files.has(mediaPath)) {
+      const m = await getMedia(conn, mediaId);
+      if (m === null) throw new PackError(`card "${cardId}" references missing media ${mediaId}`);
+      files.set(mediaPath, m.bytes);
+    }
+    return mediaPath;
+  };
+
   const jsonCards: PackJsonCard[] = [];
   for (const card of cards) {
-    let mediaPath: string | undefined;
-    if (card.mediaId !== null) {
-      // media id is '<deck_id>/<path in pack>'
-      mediaPath = card.mediaId.startsWith(`${deckId}/`)
-        ? card.mediaId.slice(deckId.length + 1)
-        : card.mediaId;
-      if (!files.has(mediaPath)) {
-        const m = await getMedia(conn, card.mediaId);
-        if (m === null) throw new PackError(`card "${card.id}" references missing media ${card.mediaId}`);
-        files.set(mediaPath, m.bytes);
-      }
-    }
+    const mediaPath = card.mediaId === null ? undefined : await collect(card.id, card.mediaId);
+    const answerMediaPath =
+      card.answerMediaId === null ? undefined : await collect(card.id, card.answerMediaId);
     jsonCards.push({
       id: card.id,
       prompt:
@@ -429,6 +456,7 @@ export async function exportPack(
           ? { type: 'text', text: card.promptText ?? '' }
           : { type: card.promptType as PromptType, media: mediaPath },
       answers: card.answers,
+      ...(answerMediaPath !== undefined ? { answer_media: answerMediaPath } : {}),
       ...(card.hint !== null ? { hint: card.hint } : {}),
       ...(card.tags.length > 0 ? { tags: card.tags } : {}),
     });
