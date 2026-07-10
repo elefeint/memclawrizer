@@ -333,6 +333,7 @@ export async function importPack(
         promptType: card.promptType,
         promptText: card.promptText,
         mediaId: card.mediaPath === null ? null : mediaIdFor(deck.id, card.mediaPath),
+        answerMediaId: null, // format v2 wiring lands with the pack-side changes
         answers: card.answers,
         hint: card.hint,
         tags: card.tags,

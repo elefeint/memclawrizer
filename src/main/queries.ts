@@ -81,6 +81,9 @@ export interface CardRow {
   promptType: string;
   promptText: string | null;
   mediaId: string | null;
+  /** Audio played during feedback after the attempt (format v2); never
+   * exposed before the attempt. */
+  answerMediaId: string | null;
   answers: string[];
   hint: string | null;
   tags: string[];
@@ -206,12 +209,14 @@ export async function removeDeck(conn: DuckDBConnection, id: string): Promise<vo
 
 export async function upsertCard(conn: DuckDBConnection, card: CardRow): Promise<void> {
   await conn.run(
-    `INSERT INTO cards (deck_id, id, prompt_type, prompt_text, media_id, answers, hint, tags, active)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+    `INSERT INTO cards
+       (deck_id, id, prompt_type, prompt_text, media_id, answer_media_id, answers, hint, tags, active)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
      ON CONFLICT (deck_id, id) DO UPDATE SET
        prompt_type = excluded.prompt_type,
        prompt_text = excluded.prompt_text,
        media_id = excluded.media_id,
+       answer_media_id = excluded.answer_media_id,
        answers = excluded.answers,
        hint = excluded.hint,
        tags = excluded.tags,
@@ -222,6 +227,7 @@ export async function upsertCard(conn: DuckDBConnection, card: CardRow): Promise
       card.promptType,
       card.promptText,
       card.mediaId,
+      card.answerMediaId,
       JSON.stringify(card.answers),
       card.hint,
       JSON.stringify(card.tags),
@@ -237,14 +243,16 @@ function cardFromRow(r: DuckDBValue[]): CardRow {
     promptType: asString(r[2]),
     promptText: asStringOrNull(r[3]),
     mediaId: asStringOrNull(r[4]),
-    answers: asJson<string[]>(r[5]),
-    hint: asStringOrNull(r[6]),
-    tags: asJson<string[]>(r[7]),
-    active: asBoolean(r[8]),
+    answerMediaId: asStringOrNull(r[5]),
+    answers: asJson<string[]>(r[6]),
+    hint: asStringOrNull(r[7]),
+    tags: asJson<string[]>(r[8]),
+    active: asBoolean(r[9]),
   };
 }
 
-const CARD_COLS = 'deck_id, id, prompt_type, prompt_text, media_id, answers, hint, tags, active';
+const CARD_COLS =
+  'deck_id, id, prompt_type, prompt_text, media_id, answer_media_id, answers, hint, tags, active';
 
 export async function listCards(
   conn: DuckDBConnection,
@@ -285,14 +293,18 @@ export async function getMedia(
   return { mime: asString(rows[0][0]), bytes: blob.bytes };
 }
 
-/** Media ids no longer referenced by any card of the deck (after re-import). */
+/** Media ids no longer referenced by any card of the deck (after re-import).
+ * Both prompt media and answer media (format v2) count as references. */
 export async function deleteUnreferencedMedia(
   conn: DuckDBConnection,
   deckId: string,
 ): Promise<void> {
   await conn.run(
     `DELETE FROM media WHERE deck_id = $1
-       AND id NOT IN (SELECT media_id FROM cards WHERE deck_id = $1 AND media_id IS NOT NULL)`,
+       AND id NOT IN (SELECT media_id FROM cards WHERE deck_id = $1 AND media_id IS NOT NULL)
+       AND id NOT IN (
+         SELECT answer_media_id FROM cards WHERE deck_id = $1 AND answer_media_id IS NOT NULL
+       )`,
     [deckId],
   );
 }

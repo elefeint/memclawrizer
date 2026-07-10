@@ -44,6 +44,7 @@ const card = (over: Partial<CardRow> = {}): CardRow => ({
   promptType: 'text',
   promptText: 'し',
   mediaId: null,
+  answerMediaId: null,
   answers: ['shi', 'si'],
   hint: 'she has a fishing hook',
   tags: ['hiragana', 's-row'],

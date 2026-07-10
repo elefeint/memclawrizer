@@ -38,6 +38,7 @@ const card = (id: string, over: Partial<CardRow> = {}): CardRow => ({
   promptType: 'text',
   promptText: id,
   mediaId: null,
+  answerMediaId: null,
   answers: [id],
   hint: null,
   tags: [],
