@@ -48,8 +48,27 @@ describe('generator goldens', () => {
 });
 
 describe('kana decks', () => {
-  const hira = readPack(path.join(DECKS_DIR, 'kana-hiragana.deckpack')).deck;
-  const kata = readPack(path.join(DECKS_DIR, 'kana-katakana.deckpack')).deck;
+  const hiraPack = readPack(path.join(DECKS_DIR, 'kana-hiragana.deckpack'));
+  const kataPack = readPack(path.join(DECKS_DIR, 'kana-katakana.deckpack'));
+  const hira = hiraPack.deck;
+  const kata = kataPack.deck;
+
+  it('embed answer-side audio on every card, shared across syllabaries (format v2)', () => {
+    for (const pack of [hiraPack, kataPack]) {
+      expect(pack.deck.formatVersion).toBe(2);
+      for (const card of pack.deck.cards) {
+        expect(card.answerMediaPath, card.id).toMatch(/^media\/.+\.ogg$/);
+        const ogg = pack.media.get(card.answerMediaPath as string);
+        expect(ogg, `${card.id} audio bytes`).toBeDefined();
+        expect(Buffer.from((ogg as Uint8Array).slice(0, 4)).toString('latin1')).toBe('OggS');
+      }
+      expect(pack.media.size).toBe(104); // one ogg per mora
+    }
+    // Same recording for both syllabaries: hira-shi and kata-shi share bytes.
+    expect(Array.from(hiraPack.media.get('media/shi.ogg') ?? [])).toEqual(
+      Array.from(kataPack.media.get('media/shi.ogg') ?? []),
+    );
+  });
 
   it('cover 46 base + 25 voiced/semi-voiced + 33 yōon = 104 cards per script', () => {
     for (const deck of [hira, kata]) {

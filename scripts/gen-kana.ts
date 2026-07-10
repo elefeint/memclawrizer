@@ -9,7 +9,7 @@
  * `npm run gen:decks` with unchanged tables produces byte-identical packs.
  * Golden test: test/unit/generators.golden.test.ts.
  */
-import { mkdirSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildDeckJson, zipPack, PackJsonCard } from '../src/main/packs';
 
@@ -154,13 +154,33 @@ export interface GeneratedPack {
   bytes: Uint8Array;
 }
 
+/**
+ * Answer-side audio (format v2): committed oggs authored ONCE by
+ * scripts/gen-kana-audio.ts. When scripts/audio/kana/ has <id>.ogg files they
+ * are embedded (hiragana and katakana share the same recordings); when the
+ * directory is absent or empty the decks generate exactly as before, silent.
+ */
+const AUDIO_DIR = path.resolve(__dirname, 'audio', 'kana');
+
+function audioFor(id: string): Uint8Array | null {
+  const p = path.join(AUDIO_DIR, `${id}.ogg`);
+  return existsSync(p) ? new Uint8Array(readFileSync(p)) : null;
+}
+
 function kanaDeck(script: 'hiragana' | 'katakana'): GeneratedPack {
-  const cards: PackJsonCard[] = TABLE.map((e) => ({
-    id: `${script === 'hiragana' ? 'hira' : 'kata'}-${e.id}`,
-    prompt: { type: 'text', text: script === 'hiragana' ? e.hira : toKatakana(e.hira) },
-    answers: e.answers,
-    tags: [script, ...e.tags],
-  }));
+  const files = new Map<string, Uint8Array>();
+  const cards: PackJsonCard[] = TABLE.map((e) => {
+    const audio = audioFor(e.id);
+    const mediaPath = `media/${e.id}.ogg`;
+    if (audio !== null) files.set(mediaPath, audio);
+    return {
+      id: `${script === 'hiragana' ? 'hira' : 'kata'}-${e.id}`,
+      prompt: { type: 'text', text: script === 'hiragana' ? e.hira : toKatakana(e.hira) },
+      answers: e.answers,
+      ...(audio !== null ? { answer_media: mediaPath } : {}),
+      tags: [script, ...e.tags],
+    };
+  });
   const deckJson = buildDeckJson({
     id: `kana-${script}-v1`,
     name: `Japanese — ${script} → romaji`,
@@ -170,10 +190,8 @@ function kanaDeck(script: 'hiragana' | 'katakana'): GeneratedPack {
     settings: { baseTimerMs: 5000, newCardsPerSession: 5 },
     cards,
   });
-  return {
-    filename: `kana-${script}.deckpack`,
-    bytes: zipPack(new Map([['deck.json', new TextEncoder().encode(deckJson)]])),
-  };
+  files.set('deck.json', new TextEncoder().encode(deckJson));
+  return { filename: `kana-${script}.deckpack`, bytes: zipPack(files) };
 }
 
 export function genKanaPacks(): GeneratedPack[] {
