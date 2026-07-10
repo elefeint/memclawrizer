@@ -43,7 +43,7 @@ requests go in the section below.
   Additive; older backends simply never set it.
 
 ## New milestones (2026-07-08): answer-side audio (pack format v2)
-- [ ] B6 [backend]: PACK_FORMAT_VERSION=2 accepting v1+v2; optional card
+- [x] B6 [backend]: PACK_FORMAT_VERSION=2 accepting v1+v2; optional card
       `answer_media` (audio, path-validated); DB migration v2 adds
       `cards.answer_media_id`; import/export round-trip; sessions set
       `answerMediaUrl` on every AnswerResult for cards that have it;
@@ -153,3 +153,14 @@ requests go in the section below.
   NOTE for integration: real backend must emit answerMediaUrl on session
   answers for kana cards once B6 audio lands — renderer is ready either way
   (absent/null = silent, per contract).
+- 2026-07-10 [backend] B6 done. Pack format v2 (v1 still accepted), DB
+  migration v2 (cards.answer_media_id), sessions attach answerMediaUrl on
+  every AnswerResult (both outcomes, retries) for cards with answer_media.
+  Audio synthesis RAN: open_jtalk (nitech_jp_atr503_m001) + bitexact ffmpeg
+  post-processing; 104 committed oggs in scripts/audio/kana/ (808K,
+  re-runs byte-identical; n sanity-checked, not degenerate). Kana decks
+  regenerated with embedded audio (~400K each); goldens extended. Gates:
+  145 unit/DB tests + lint green; packaged app migrated a COPY of the real
+  profile DB v1→v2 (267 attempts, 20 sessions, 3 trophies intact); e2e
+  smoke passes against the new package. For F6: answerMediaUrl is a
+  mem:// URL — <audio> element only, fetch() fails by scheme.

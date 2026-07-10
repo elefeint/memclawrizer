@@ -96,6 +96,30 @@ describe('parsePackJson', () => {
     expect(() => parsePackJson(json)).toThrow(message);
   });
 
+  it('accepts both format_version 1 and 2 (v2 = answer-side audio)', () => {
+    expect(parsePackJson(validDeckJson({ format_version: 1 })).formatVersion).toBe(1);
+    expect(parsePackJson(validDeckJson({ format_version: 2 })).formatVersion).toBe(2);
+  });
+
+  it('parses optional answer_media and rejects non-audio paths', () => {
+    const card = (answer_media: unknown) => ({
+      id: 'c1',
+      prompt: { type: 'text', text: 'x' },
+      answers: ['x'],
+      answer_media,
+    });
+    const ok = parsePackJson(validDeckJson({ format_version: 2, cards: [card('media/x.ogg')] }));
+    expect(ok.cards[0].answerMediaPath).toBe('media/x.ogg');
+    const none = parsePackJson(validDeckJson({ cards: [card(undefined)] }));
+    expect(none.cards[0].answerMediaPath).toBeNull();
+    expect(() =>
+      parsePackJson(validDeckJson({ format_version: 2, cards: [card('media/x.svg')] })),
+    ).toThrow(/answer_media must be an audio file/);
+    expect(() =>
+      parsePackJson(validDeckJson({ format_version: 2, cards: [card(42)] })),
+    ).toThrow(/answer_media must be a string/);
+  });
+
   it('refuses packs from a newer format_version', () => {
     expect(() => parsePackJson(validDeckJson({ format_version: PACK_FORMAT_VERSION + 1 }))).toThrow(
       /Update the app/,
@@ -121,6 +145,11 @@ describe('readPack', () => {
     const svg = media.get('media/dot.svg');
     expect(svg).toBeDefined();
     expect(Buffer.from(svg as Uint8Array).toString('utf8')).toContain('<svg');
+    // The answer-audio card (format v2) brings its ogg along.
+    expect(deck.cards[3].answerMediaPath).toBe('media/n.ogg');
+    const ogg = media.get('media/n.ogg');
+    expect(ogg).toBeDefined();
+    expect(Buffer.from((ogg as Uint8Array).slice(0, 4)).toString('latin1')).toBe('OggS');
   });
 
   it('reads the same pack in bare-directory form', () => {
@@ -136,6 +165,7 @@ describe('readPack', () => {
     ['broken-bad-json.deckpack', /not valid JSON/],
     ['broken-missing-media.deckpack', /card "ghost" references media\/ghost\.svg/],
     ['broken-format-999.deckpack', /format_version 999/],
+    ['broken-missing-answer-media.deckpack', /card "mute" references media\/mute\.ogg/],
     ['broken-not-a-zip.deckpack', /not a readable zip/],
     ['broken-no-deck-json.deckpack', /no deck\.json/],
   ])('rejects %s with a helpful error', (fixture, message) => {
@@ -167,6 +197,13 @@ describe('importPack', () => {
 
     const media = await getMedia(db.conn, 'mini/media/dot.svg');
     expect(media?.mime).toBe('image/svg+xml');
+
+    // Answer audio (format v2) is stored like prompt media and linked.
+    const n = cards.find((c) => c.id === 'n');
+    expect(n?.answerMediaId).toBe('mini/media/n.ogg');
+    const ogg = await getMedia(db.conn, 'mini/media/n.ogg');
+    expect(ogg?.mime).toBe('audio/ogg');
+    expect(Buffer.from((ogg?.bytes ?? new Uint8Array()).slice(0, 4)).toString('latin1')).toBe('OggS');
     expect(Buffer.from(media?.bytes ?? new Uint8Array()).toString('utf8')).toContain('<svg');
 
     // New cards are "new": no state rows at all.
@@ -289,6 +326,11 @@ describe('exportPack', () => {
       expect(byId(reread)).toEqual(byId(original));
       expect(Array.from(reread.media.get('media/dot.svg') ?? [])).toEqual(
         Array.from(original.media.get('media/dot.svg') ?? []),
+      );
+      // answer_media (format v2) round-trips: path in deck.json + bytes.
+      expect(reread.deck.cards.find((c) => c.id === 'n')?.answerMediaPath).toBe('media/n.ogg');
+      expect(Array.from(reread.media.get('media/n.ogg') ?? [])).toEqual(
+        Array.from(original.media.get('media/n.ogg') ?? []),
       );
 
       // Determinism: exporting again produces identical bytes.

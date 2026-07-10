@@ -114,6 +114,42 @@ describe('SessionManager', () => {
     expect(start.queueLength).toBe(4);
   });
 
+  it('carries answerMediaUrl on every result for the audio-answer card, retries included', async () => {
+    await sm.start('mini');
+    // dot, ka: no answer audio → null.
+    let r = await sm.answer('session-1', {
+      cardId: 'dot', response: 'dot', elapsedMs: 500, timedOut: false, prize: '🦆',
+    });
+    expect(r.answerMediaUrl).toBeNull();
+    r = await sm.answer('session-1', {
+      cardId: 'ka', response: 'ka', elapsedMs: 500, timedOut: false, prize: '🎲',
+    });
+    expect(r.answerMediaUrl).toBeNull();
+
+    // n has media/n.ogg: present on a failed first attempt...
+    r = await sm.answer('session-1', {
+      cardId: 'n', response: '', elapsedMs: 9999, timedOut: true, prize: null,
+    });
+    expect(r.outcome).toBe('timeout');
+    expect(r.answerMediaUrl).toBe('mem://media/mini/media/n.ogg');
+
+    r = await sm.answer('session-1', {
+      cardId: 'shi', response: 'shi', elapsedMs: 500, timedOut: false, prize: '🌵',
+    });
+    expect(r.answerMediaUrl).toBeNull();
+
+    // ...and again on the retry (correct this time) — both outcomes get it.
+    expect(r.next).toMatchObject({ cardId: 'n', isRetry: true });
+    r = await sm.answer('session-1', {
+      cardId: 'n', response: 'n', elapsedMs: 500, timedOut: false, prize: null,
+    });
+    expect(r.outcome).toBe('correct');
+    expect(r.isFirstOfSession).toBe(false);
+    expect(r.answerMediaUrl).toBe('mem://media/mini/media/n.ogg');
+    // But it never leaks into CardView pre-attempt.
+    expect(r.sessionEnd).not.toBeNull();
+  });
+
   it('writes the full audit log: every attempt incl. retries, elapsed clamped to timer', async () => {
     await sm.start('mini');
     await sm.answer('session-1', { cardId: 'dot', response: 'dot', elapsedMs: 1200, timedOut: false, prize: '🦆' });

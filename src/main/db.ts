@@ -14,7 +14,11 @@ export interface Db {
   conn: DuckDBConnection;
 }
 
-const MIGRATIONS: Array<(conn: DuckDBConnection) => Promise<void>> = [migrateV1];
+/** Exported for tests only: lets a test build a historical-version DB. */
+export const MIGRATIONS: Array<(conn: DuckDBConnection) => Promise<void>> = [
+  migrateV1,
+  migrateV2,
+];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
 
@@ -51,6 +55,11 @@ async function migrate(conn: DuckDBConnection): Promise<void> {
     await conn.run('ROLLBACK');
     throw e;
   }
+}
+
+/** v2 (2026-07-08): answer-side audio — pack format v2, DESIGN.md. */
+async function migrateV2(conn: DuckDBConnection): Promise<void> {
+  await conn.run('ALTER TABLE cards ADD COLUMN answer_media_id TEXT');
 }
 
 /** v1: the full schema from DESIGN.md. */

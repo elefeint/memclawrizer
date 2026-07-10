@@ -1,8 +1,8 @@
 {
-  "format_version": 1,
+  "format_version": 2,
   "id": "mini",
   "name": "Mini fixture deck",
-  "description": "Four cards: two plain text, one SVG image, one hinted.",
+  "description": "Four cards: two plain text, one SVG image, one hinted with answer audio.",
   "settings": {
     "base_timer_ms": 5000,
     "new_cards_per_session": 5
@@ -59,6 +59,7 @@
       "answers": [
         "n"
       ],
+      "answer_media": "media/n.ogg",
       "hint": "the only lone consonant",
       "tags": [
         "hiragana"

@@ -3,7 +3,7 @@ import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { DuckDBInstance } from '@duckdb/node-api';
-import { openDatabase, SCHEMA_VERSION } from './db';
+import { openDatabase, MIGRATIONS, SCHEMA_VERSION } from './db';
 
 describe('openDatabase', () => {
   it('migrates a fresh database to the latest schema', async () => {
@@ -57,6 +57,46 @@ describe('openDatabase', () => {
       const db = await openDatabase(file);
       const version = await db.conn.runAndReadAll('SELECT version FROM schema_version');
       expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      db.conn.closeSync();
+      db.instance.closeSync();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('migrates a schema-v1 file to v2, preserving data and adding cards.answer_media_id', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
+    const file = join(dir, 'v1.duckdb');
+    try {
+      // Build a real historical v1 file with data, exactly as the v1 app did.
+      const instance = await DuckDBInstance.create(file);
+      const conn = await instance.connect();
+      await MIGRATIONS[0](conn);
+      await conn.run('CREATE TABLE schema_version(version INTEGER NOT NULL)');
+      await conn.run('INSERT INTO schema_version VALUES (1)');
+      await conn.run(
+        `INSERT INTO decks VALUES ('d1', 'Deck', NULL, '{}', 1, TIMESTAMP '2026-07-05 09:00:00')`,
+      );
+      await conn.run(
+        `INSERT INTO cards (deck_id, id, prompt_type, prompt_text, media_id, answers, hint, tags)
+         VALUES ('d1', 'c1', 'text', 'し', NULL, '["shi"]', NULL, '[]')`,
+      );
+      await conn.run(
+        `INSERT INTO card_state VALUES ('d1', 'c1', 3, TIMESTAMP '2026-07-08 09:00:00',
+           TIMESTAMP '2026-07-05 09:00:00', TIMESTAMP '2026-07-05 09:00:00', 4, 1)`,
+      );
+      conn.closeSync();
+      instance.closeSync();
+
+      const db = await openDatabase(file);
+      const version = await db.conn.runAndReadAll('SELECT version FROM schema_version');
+      expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      const cards = await db.conn.runAndReadAll(
+        'SELECT id, prompt_text, answer_media_id, active FROM cards',
+      );
+      expect(cards.getRows()).toEqual([['c1', 'し', null, true]]);
+      const state = await db.conn.runAndReadAll('SELECT box, lifetime_correct FROM card_state');
+      expect(state.getRows()).toEqual([[3, 4]]);
       db.conn.closeSync();
       db.instance.closeSync();
     } finally {
