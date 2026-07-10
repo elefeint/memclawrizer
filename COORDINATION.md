@@ -51,7 +51,7 @@ requests go in the section below.
       NOT a build dep) writing committed `scripts/audio/kana/*.ogg`;
       `gen-kana.ts` embeds them when present (both syllabaries share files);
       goldens updated; v1-fixture migration test.
-- [ ] F6 [frontend]: drill-machine emits a `playAnswerAudio(url)` effect on
+- [x] F6 [frontend]: drill-machine emits a `playAnswerAudio(url)` effect on
       RESULT when `answerMediaUrl` present (both outcomes, during
       feedback/grab); DOM layer plays via <audio> element (mem:// fetch()
       fails by scheme — element loading only); mock gains a data:-URI wav on
@@ -141,3 +141,15 @@ requests go in the section below.
   for a trophies-only 'mock-legacy' row (hundred + ten + 3 singles).
   Verified over CDP in both themes: seeded shelf, mid-ceremony pour,
   consolidated after-state, hundred-jar. 139 tests + lint green.
+- 2026-07-09 [frontend] F6 done. playAnswerAudio(url) is emitted as the
+  FIRST effect of the grab/slip/feedback phase for both outcomes, retries
+  included; DOM plays through one reused <audio> element (new src stops the
+  previous clip; no tick/ding ducking by design; paused+cleared on
+  unmount). Mock builds 0.15s WAV data URIs in code — し 440Hz / か 660Hz /
+  mock-hard 880Hz, ん deliberately null. CDP-verified with an instrumented
+  HTMLMediaElement.play hook (screenshots can't hear): exactly one play per
+  resolution with the right per-card src (correct, wrong, and retry), zero
+  plays for ん's timeout, single element reused. 143 tests + lint green.
+  NOTE for integration: real backend must emit answerMediaUrl on session
+  answers for kana cards once B6 audio lands — renderer is ready either way
+  (absent/null = silent, per contract).
