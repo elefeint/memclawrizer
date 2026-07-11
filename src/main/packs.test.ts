@@ -15,7 +15,15 @@ import {
   PackError,
   PACK_FORMAT_VERSION,
 } from './packs';
-import { getCardState, getMedia, listCards, listCardStates, upsertCardState } from './queries';
+import {
+  archiveDeck,
+  getCardState,
+  getDeck,
+  getMedia,
+  listCards,
+  listCardStates,
+  upsertCardState,
+} from './queries';
 
 const FIXTURES = path.resolve(__dirname, '../../test/fixtures');
 const MINI = path.join(FIXTURES, 'mini.deckpack');
@@ -294,6 +302,66 @@ describe('importPack', () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it('archived decks are frozen: re-import mints a fresh deck, history untouched', async () => {
+    const first = await importPack(db.conn, MINI, NOW);
+    expect(first.deckId).toBe('mini');
+    // Progress + audit on the original.
+    await upsertCardState(db.conn, {
+      deckId: 'mini', cardId: 'shi', box: 5, dueAtMs: NOW.getTime(),
+      lastSuccessAtMs: NOW.getTime(), lastSeenAtMs: NOW.getTime(),
+      lifetimeCorrect: 7, lifetimeWrong: 0,
+    });
+    await archiveDeck(db.conn, 'mini', NOW.getTime());
+
+    // Re-import "the same" pack → brand-new deck with a minted internal id.
+    const second = await importPack(db.conn, MINI, new Date(NOW.getTime() + 1000));
+    expect(second).toEqual({
+      deckId: 'mini#2',
+      name: 'Mini fixture deck',
+      cardsAdded: 4,
+      cardsUpdated: 0,
+      orphanedCardIds: [],
+    });
+    const fresh = await getDeck(db.conn, 'mini#2');
+    expect(fresh?.packId).toBe('mini');
+    expect(fresh?.archivedAtMs).toBeNull();
+    // Fresh start: no state; media namespaced under the new internal id.
+    expect(await listCardStates(db.conn, 'mini#2')).toHaveLength(0);
+    expect(await getMedia(db.conn, 'mini#2/media/dot.svg')).not.toBeNull();
+
+    // The archived deck is untouched: still archived, cards/state/media intact.
+    const archived = await getDeck(db.conn, 'mini');
+    expect(archived?.archivedAtMs).toBe(NOW.getTime());
+    expect(await listCards(db.conn, 'mini')).toHaveLength(4);
+    expect((await getCardState(db.conn, 'mini', 'shi'))?.box).toBe(5);
+    expect(await getMedia(db.conn, 'mini/media/dot.svg')).not.toBeNull();
+
+    // A further re-import upserts the ACTIVE successor, not a third deck.
+    const third = await importPack(db.conn, MINI, new Date(NOW.getTime() + 2000));
+    expect(third.deckId).toBe('mini#2');
+    expect(third.cardsUpdated).toBe(4);
+    expect(third.cardsAdded).toBe(0);
+
+    // Export of the successor keeps the author-chosen pack id.
+    const dir = mkdtempSync(path.join(tmpdir(), 'memclawrizer-export-'));
+    try {
+      const out = path.join(dir, 'reexport.deckpack');
+      await exportPack(db.conn, 'mini#2', out);
+      expect(readPack(out).deck.id).toBe('mini');
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('mints #2, #3, ... skipping ids taken by ANY deck, archived included', async () => {
+    await importPack(db.conn, MINI, NOW);
+    await archiveDeck(db.conn, 'mini', NOW.getTime());
+    await importPack(db.conn, MINI, NOW); // → mini#2
+    await archiveDeck(db.conn, 'mini#2', NOW.getTime());
+    const r = await importPack(db.conn, MINI, NOW); // both taken → mini#3
+    expect(r.deckId).toBe('mini#3');
   });
 
   it('leaves the DB untouched when the pack is invalid', async () => {

@@ -68,12 +68,17 @@ function asJson<T>(v: DuckDBValue): T {
 // Row shapes (JS side)
 
 export interface DeckRow {
+  /** Internal id — may differ from packId after archive + re-import (v3). */
   id: string;
+  /** Author-chosen id from deck.json; the import matching key. */
+  packId: string;
   name: string;
   description: string | null;
   settings: DeckSettings;
   formatVersion: number;
   importedAtMs: number;
+  /** Non-null = archived: hidden, not drillable, history frozen. */
+  archivedAtMs: number | null;
 }
 
 export interface CardRow {
@@ -136,21 +141,26 @@ export interface AttemptInsert {
 
 export async function upsertDeck(conn: DuckDBConnection, deck: DeckRow): Promise<void> {
   await conn.run(
-    `INSERT INTO decks (id, name, description, settings, format_version, imported_at)
-     VALUES ($1, $2, $3, $4, $5, $6)
+    `INSERT INTO decks
+       (id, pack_id, name, description, settings, format_version, imported_at, archived_at)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      ON CONFLICT (id) DO UPDATE SET
+       pack_id = excluded.pack_id,
        name = excluded.name,
        description = excluded.description,
        settings = excluded.settings,
        format_version = excluded.format_version,
-       imported_at = excluded.imported_at`,
+       imported_at = excluded.imported_at,
+       archived_at = excluded.archived_at`,
     [
       deck.id,
+      deck.packId,
       deck.name,
       deck.description,
       JSON.stringify(deck.settings),
       deck.formatVersion,
       msToTimestamp(deck.importedAtMs),
+      deck.archivedAtMs === null ? null : msToTimestamp(deck.archivedAtMs),
     ],
   );
 }
@@ -158,13 +168,15 @@ export async function upsertDeck(conn: DuckDBConnection, deck: DeckRow): Promise
 function deckFromRow(r: DuckDBValue[]): DeckRow {
   return {
     id: asString(r[0]),
-    name: asString(r[1]),
-    description: asStringOrNull(r[2]),
+    packId: asString(r[1]),
+    name: asString(r[2]),
+    description: asStringOrNull(r[3]),
     // Rows written before a settings field existed (maxBox1ForNew, added
     // 2026-07-10) pick up the default at read time.
-    settings: withSettingsDefaults(asJson<DeckSettings>(r[3])),
-    formatVersion: asNumber(r[4]),
-    importedAtMs: timestampToMs(r[5]),
+    settings: withSettingsDefaults(asJson<DeckSettings>(r[4])),
+    formatVersion: asNumber(r[5]),
+    importedAtMs: timestampToMs(r[6]),
+    archivedAtMs: r[7] === null ? null : timestampToMs(r[7]),
   };
 }
 
@@ -172,7 +184,8 @@ function withSettingsDefaults(stored: DeckSettings): DeckSettings {
   return { ...stored, maxBox1ForNew: stored.maxBox1ForNew ?? DEFAULT_MAX_BOX1_FOR_NEW };
 }
 
-const DECK_COLS = 'id, name, description, settings, format_version, imported_at';
+const DECK_COLS =
+  'id, pack_id, name, description, settings, format_version, imported_at, archived_at';
 
 export async function getDeck(conn: DuckDBConnection, id: string): Promise<DeckRow | null> {
   const reader = await conn.runAndReadAll(
@@ -197,6 +210,38 @@ export async function updateDeckSettings(
     JSON.stringify(settings),
     id,
   ]);
+}
+
+/**
+ * The import target for a pack id: the ACTIVE deck carrying it. If several
+ * active decks share a pack_id (unarchive after a re-import), the most
+ * recently imported one wins (DESIGN.md "Deck lifecycle: archiving").
+ */
+export async function findActiveDeckByPackId(
+  conn: DuckDBConnection,
+  packId: string,
+): Promise<DeckRow | null> {
+  const reader = await conn.runAndReadAll(
+    `SELECT ${DECK_COLS} FROM decks
+     WHERE pack_id = $1 AND archived_at IS NULL
+     ORDER BY imported_at DESC, id DESC LIMIT 1`,
+    [packId],
+  );
+  const rows = reader.getRows();
+  return rows.length === 0 ? null : deckFromRow(rows[0]);
+}
+
+/** Reversible: hides the deck and freezes its import identity (v3). */
+export async function archiveDeck(
+  conn: DuckDBConnection,
+  id: string,
+  nowMs: number,
+): Promise<void> {
+  await conn.run('UPDATE decks SET archived_at = $1 WHERE id = $2', [msToTimestamp(nowMs), id]);
+}
+
+export async function unarchiveDeck(conn: DuckDBConnection, id: string): Promise<void> {
+  await conn.run('UPDATE decks SET archived_at = NULL WHERE id = $1', [id]);
 }
 
 /**

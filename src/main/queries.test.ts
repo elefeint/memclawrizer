@@ -30,11 +30,13 @@ const T0 = Date.UTC(2026, 6, 5, 9, 0, 0); // 2026-07-05T09:00:00Z
 
 const deck = (over: Partial<DeckRow> = {}): DeckRow => ({
   id: 'd1',
+  packId: 'd1',
   name: 'Deck one',
   description: 'desc',
   settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
   formatVersion: 1,
   importedAtMs: T0,
+  archivedAtMs: null,
   ...over,
 });
 

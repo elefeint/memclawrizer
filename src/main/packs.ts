@@ -21,6 +21,7 @@ import { DEFAULT_MAX_BOX1_FOR_NEW } from '../shared/api';
 import { normalizeAnswer } from '../shared/normalize';
 import {
   deleteUnreferencedMedia,
+  findActiveDeckByPackId,
   getDeck,
   getMedia,
   listCards,
@@ -327,7 +328,22 @@ export async function importPack(
 ): Promise<ImportResult> {
   const { deck, media } = readPack(packPath);
 
-  const existingIds = new Set((await listCards(conn, deck.id)).map((c) => c.id));
+  // Deck lifecycle (v3): the pack's id is a matching key, not the storage
+  // key. Upsert into the ACTIVE deck carrying this pack_id; if none exists
+  // (including when only ARCHIVED decks carry it — their history is frozen),
+  // mint a fresh internal id and start from scratch.
+  const target = await findActiveDeckByPackId(conn, deck.id);
+  let internalId: string;
+  if (target !== null) {
+    internalId = target.id;
+  } else {
+    internalId = deck.id;
+    for (let n = 2; (await getDeck(conn, internalId)) !== null; n++) {
+      internalId = `${deck.id}#${n}`;
+    }
+  }
+
+  const existingIds = new Set((await listCards(conn, internalId)).map((c) => c.id));
   const packIds = new Set(deck.cards.map((c) => c.id));
   const orphanedCardIds = [...existingIds].filter((id) => !packIds.has(id)).sort();
   let cardsAdded = 0;
@@ -336,30 +352,32 @@ export async function importPack(
   await conn.run('BEGIN TRANSACTION');
   try {
     await upsertDeck(conn, {
-      id: deck.id,
+      id: internalId,
+      packId: deck.id,
       name: deck.name,
       description: deck.description,
       settings: deck.settings,
       formatVersion: deck.formatVersion,
       importedAtMs: now.getTime(),
+      archivedAtMs: null,
     });
     for (const [mediaPath, bytes] of media) {
       await upsertMedia(conn, {
-        id: mediaIdFor(deck.id, mediaPath),
-        deckId: deck.id,
+        id: mediaIdFor(internalId, mediaPath),
+        deckId: internalId,
         mime: mimeForMediaPath(mediaPath),
         bytes,
       });
     }
     for (const card of deck.cards) {
       await upsertCard(conn, {
-        deckId: deck.id,
+        deckId: internalId,
         id: card.id,
         promptType: card.promptType,
         promptText: card.promptText,
-        mediaId: card.mediaPath === null ? null : mediaIdFor(deck.id, card.mediaPath),
+        mediaId: card.mediaPath === null ? null : mediaIdFor(internalId, card.mediaPath),
         answerMediaId:
-          card.answerMediaPath === null ? null : mediaIdFor(deck.id, card.answerMediaPath),
+          card.answerMediaPath === null ? null : mediaIdFor(internalId, card.answerMediaPath),
         answers: card.answers,
         hint: card.hint,
         tags: card.tags,
@@ -368,14 +386,14 @@ export async function importPack(
       if (existingIds.has(card.id)) cardsUpdated++;
       else cardsAdded++;
     }
-    await deleteUnreferencedMedia(conn, deck.id);
+    await deleteUnreferencedMedia(conn, internalId);
     await conn.run('COMMIT');
   } catch (e) {
     await conn.run('ROLLBACK');
     throw e;
   }
 
-  return { deckId: deck.id, name: deck.name, cardsAdded, cardsUpdated, orphanedCardIds };
+  return { deckId: internalId, name: deck.name, cardsAdded, cardsUpdated, orphanedCardIds };
 }
 
 // ---------------------------------------------------------------------------
@@ -470,7 +488,8 @@ export async function exportPack(
   }
 
   const deckJson = buildDeckJson({
-    id: deck.id,
+    // Round-trips preserve the author-chosen id, not the internal one (v3).
+    id: deck.packId,
     name: deck.name,
     description: deck.description,
     settings: deck.settings,
