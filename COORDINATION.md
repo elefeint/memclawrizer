@@ -61,7 +61,7 @@ requests go in the section below.
       packId/archivedAtIso (replace coordinator stubs in stats.ts); ipc
       handlers for decks:archive/decks:unarchive; migration + import + e2e
       gates.
-- [ ] F7 [frontend]: home splits active list from a collapsed "Archived"
+- [x] F7 [frontend]: home splits active list from a collapsed "Archived"
       section (name, card count, archived date, Unarchive button, Stats
       link); Archive action inside each deck's Settings details (not a
       bare top-level button — misclick-resistant); archived decks keep
@@ -202,3 +202,21 @@ requests go in the section below.
   decks); e2e smoke passes. Note for F7: decks.list still returns archived
   decks (archivedAtIso non-null) — filter for the active list, render the
   rest in the Archived section.
+- 2026-07-11 [frontend] F7 done. Home splits on archivedAtIso: active rows
+  unchanged; archived decks in a collapsed "Archived (n)" <details> below
+  the list (name, count, archived date, Unarchive, Stats — no Drill).
+  Archive button sits inside each deck's Settings disclosure, pushed right
+  of Save (misclick-resistant, no confirm — reversible). Status line
+  announces both directions; the section element persists across refreshes
+  so its open state survives unarchiving. Mock extended: session.start on
+  an archived deck now REJECTS (mirrors B7) — integration note: mock and
+  real backend should agree on this. New elements use plain classes
+  (.archived-section/.archived-row/.archive-button/.unarchive-button/
+  .archived-list) — testids.ts untouched (frozen); smoke test could want
+  an 'archived-section' testid later. Verified over CDP against start:mock
+  in BOTH themes (26 scripted assertions + 10 screenshots): archive kana
+  from Settings → appears under Archived → archive piano too → its 9
+  seeded shelf trophies unaffected (shelf reads stats.trophies() only, no
+  deck-list cross-filter — mock-legacy already proves it) → "no active
+  decks" message → unarchive both → status lines correct. 155 tests
+  (+2 archiving specs in mock-api.test.ts) + tsc + lint green.

@@ -184,7 +184,8 @@ function seedTrophies(): TrophyView[] {
 export function createMockApi(): Api {
   const sessions = new Map<string, MockSession>();
   const trophies: TrophyView[] = seedTrophies();
-  // Archive state (contract #3). In-memory; F7 gives it real UI flows.
+  // Archive state (contract #3, F7): deckId → ISO timestamp. Archived decks
+  // stay listed (archivedAtIso set), keep stats/trophies, refuse drills.
   const archivedAt = new Map<string, string>();
   let sessionCounter = 0;
 
@@ -240,6 +241,8 @@ export function createMockApi(): Api {
       start: async (deckId): Promise<SessionStart> => {
         const deck = DECKS.find((d) => d.id === deckId);
         if (!deck) throw new Error(`unknown deck ${deckId}`);
+        // Mirrors B7: archived decks are not drillable (contract change #3).
+        if (archivedAt.has(deckId)) throw new Error(`deck ${deckId} is archived`);
         const id = `mock-session-${++sessionCounter}`;
         const s: MockSession = {
           id,

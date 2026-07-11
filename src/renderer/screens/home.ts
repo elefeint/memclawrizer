@@ -1,6 +1,7 @@
 /**
  * Home screen (F3): deck list (due/new counts, box mini-bar, drill,
- * drill-by-tag, export, settings), global import, and the trophy shelf —
+ * drill-by-tag, export, settings), global import, a collapsed Archived
+ * section (F7: unarchive + stats only, no drill), and the trophy shelf —
  * per-deck odometer rows with place-value consolidation (DESIGN.md "The
  * trophy shelf at scale"): hundreds → tens → loose singles. Keyboard-only
  * friendly: everything is native buttons/inputs/details.
@@ -79,6 +80,15 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
 
   const list = el('ul', 'deck-list', TESTIDS.deckList);
   screen.appendChild(list);
+
+  // F7: archived decks live in a collapsed disclosure below the active list.
+  // The <details> element persists across refreshes so its open state does.
+  const archivedSection = el('details', 'archived-section');
+  const archivedSummary = el('summary');
+  const archivedList = el('ul', 'archived-list');
+  archivedSection.append(archivedSummary, archivedList);
+  archivedSection.hidden = true;
+  screen.appendChild(archivedSection);
 
   const shelfSection = el('section', 'trophy-section');
   const shelfTitle = el('h2');
@@ -208,6 +218,19 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
             details.open = false;
           });
         }),
+        // Archive lives inside the settings disclosure on purpose: two clicks
+        // away from the drill flow, misclick-resistant. No confirm dialog —
+        // archiving is reversible (Unarchive in the section below).
+        button(
+          'Archive deck',
+          () => {
+            void api.decks.archive(deck.id).then(() => {
+              say(`archived “${deck.name}” — find it under Archived below`);
+              void refreshDecks();
+            });
+          },
+          'archive-button',
+        ),
       );
       details.appendChild(form);
       li.appendChild(details);
@@ -236,16 +259,60 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
     return jar;
   }
 
+  /** Archived deck row: name, count, archived date, Unarchive, Stats.
+   *  Deliberately NO Drill — archived decks are not drillable; history and
+   *  shelf trophies remain. */
+  function archivedRow(deck: DeckSummary): HTMLElement {
+    const li = el('li', 'archived-row');
+
+    const main = el('div', 'deck-main');
+    const name = el('span', 'deck-name');
+    name.textContent = deck.name;
+    const counts = el('span', 'deck-counts');
+    const when = deck.archivedAtIso ? new Date(deck.archivedAtIso).toLocaleDateString() : '?';
+    counts.textContent = `${deck.cardCount} cards · archived ${when}`;
+    main.append(name, counts);
+
+    const actions = el('div', 'deck-actions');
+    actions.append(
+      button(
+        'Unarchive',
+        () => {
+          void api.decks.unarchive(deck.id).then(() => {
+            say(`unarchived “${deck.name}” — back in the active list`);
+            void refreshDecks();
+          });
+        },
+        'unarchive-button',
+      ),
+      button('Stats', () => nav.stats(deck.id)),
+    );
+
+    li.append(main, actions);
+    return li;
+  }
+
   async function refreshDecks(): Promise<void> {
     const decks = await api.decks.list();
+    const active = decks.filter((d) => d.archivedAtIso === null);
+    const archived = decks.filter((d) => d.archivedAtIso !== null);
+
     list.innerHTML = '';
-    if (decks.length === 0) {
+    if (active.length === 0) {
       const empty = el('li', 'deck-empty');
-      empty.textContent = 'no decks yet — import a .deckpack to begin';
+      empty.textContent =
+        archived.length > 0
+          ? 'no active decks — unarchive one below, or import a .deckpack'
+          : 'no decks yet — import a .deckpack to begin';
       list.appendChild(empty);
-      return;
+    } else {
+      for (const deck of active) list.appendChild(deckRow(deck));
     }
-    for (const deck of decks) list.appendChild(deckRow(deck));
+
+    archivedSection.hidden = archived.length === 0;
+    archivedSummary.textContent = `Archived (${archived.length})`;
+    archivedList.innerHTML = '';
+    for (const deck of archived) archivedList.appendChild(archivedRow(deck));
   }
 
   /** A ten-jar or hundred-jar: the vessel with its contents visible inside. */
