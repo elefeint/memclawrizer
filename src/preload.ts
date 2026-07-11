@@ -23,6 +23,11 @@ const api: Api = {
     answer: (sessionId, req) => ipcRenderer.invoke(IPC.sessionAnswer, sessionId, req),
     abort: (sessionId) => ipcRenderer.invoke(IPC.sessionAbort, sessionId),
   },
+  calibration: {
+    start: (deckId) => ipcRenderer.invoke(IPC.calibrationStart, deckId),
+    submit: (sessionId, trials) => ipcRenderer.invoke(IPC.calibrationSubmit, sessionId, trials),
+    abort: (sessionId) => ipcRenderer.invoke(IPC.calibrationAbort, sessionId),
+  },
   stats: {
     deck: (deckId) => ipcRenderer.invoke(IPC.statsDeck, deckId),
     cards: (deckId) => ipcRenderer.invoke(IPC.statsCards, deckId),

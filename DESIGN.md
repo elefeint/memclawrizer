@@ -149,6 +149,37 @@ box 2: 1.25×, box 3: 1.0×, box 4: 0.85×, box 5: 0.7×). Higher boxes get tigh
 timers — mastery is speed, not just recall. Defaults: 7000 ms base for piano,
 5000 ms for kana; per-deck setting.
 
+### Timer calibration (2026-07-11, from Elena's piano observation)
+
+With a generous deadline on a *calculable* domain (staff position → count
+lines), the analytic route finishes first and keeps winning — retrieval never
+gets exercised. This is Logan's instance theory of automatization: performance
+is a race between algorithm and memory retrieval, and the deadline decides who
+may compete. Elena's own attempt log showed the textbook bimodal distribution
+(fast retrieval cluster at 1–3 s, calculation bump at 5–6 s). "Got it correct
+after thinking" isn't memorization.
+
+The deadline must sit **above the motor+retrieval floor, below the
+algorithm's completion time**. So every deck gets a **calibration round
+before its first drill** (and on demand from Settings):
+
+- **Copy-typing trials**: ~10 sampled cards show their canonical **answer**
+  (not the prompt); the user just types it. No timer, no claw, no sounds —
+  it measures, it doesn't drill. This yields the motor+perception floor for
+  that deck's answer format.
+- **Suggestion math**: `floor` = median elapsed of correctly copied trials;
+  box-1 window = `floor + 1200 ms` retrieval allowance (enough to remember,
+  not enough to compute); `base_timer_ms` = window ÷ 1.5 (the box-1
+  multiplier), rounded to 100 ms, clamped [1500, 10000]. Applied to the
+  deck's settings automatically (still hand-editable afterwards).
+- **Not Leitner, by definition**: calibration writes no card_state and moves
+  no boxes. Trials are logged in the audit log with `outcome =
+  'calibration'` in a session with `kind = 'calibration'` (schema v4), and
+  are excluded from all response-time statistics. The audit-everything rule
+  still holds — they're just labeled as what they are.
+- Recalibration any time from deck Settings (fingers change, keyboards
+  change); the latest run wins.
+
 ## Leitner scheduling
 
 Five boxes. Intervals before a card is due again after a success:

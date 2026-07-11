@@ -8,7 +8,12 @@
  */
 
 export type PromptType = 'text' | 'image' | 'audio';
-export type Outcome = 'correct' | 'wrong' | 'timeout';
+/**
+ * 'calibration' rows (contract change #4) are copy-typing warm-up trials:
+ * logged for the audit trail, never touch Leitner state, excluded from stats
+ * medians. See DESIGN.md "Timer calibration".
+ */
+export type Outcome = 'correct' | 'wrong' | 'timeout' | 'calibration';
 
 export interface DeckSettings {
   baseTimerMs: number;
@@ -34,6 +39,10 @@ export interface DeckSummary {
   /** Set when archived: hidden from active list, not drillable; history and
    *  trophies retained. (Contract change #3, additive, 2026-07-10.) */
   archivedAtIso: string | null;
+  /** When the deck's timer was last calibrated (copy-typing warm-up); null =
+   *  never — the UI runs calibration before the first drill. (Contract
+   *  change #4, additive, 2026-07-11.) */
+  calibratedAtIso: string | null;
   name: string;
   description: string | null;
   cardCount: number;
@@ -119,6 +128,30 @@ export interface AnswerResult {
   sessionEnd: SessionEnd | null;
 }
 
+export interface CalibrationStart {
+  sessionId: string;
+  /** ~10 sampled cards; text = the canonical answer to copy-type. */
+  trials: { cardId: string; text: string }[];
+}
+
+export interface CalibrationTrialResult {
+  cardId: string;
+  /** The text that was shown. */
+  text: string;
+  /** What was typed (mistyped trials are logged but excluded from the floor). */
+  response: string;
+  elapsedMs: number;
+}
+
+export interface CalibrationResult {
+  /** Median correct copy-typing time: the motor+perception floor. */
+  floorMs: number;
+  /** floor + retrieval allowance, divided by the box-1 multiplier. */
+  suggestedBaseTimerMs: number;
+  /** True when the suggestion was written into the deck's settings. */
+  appliedToSettings: boolean;
+}
+
 export interface ImportResult {
   deckId: string;
   name: string;
@@ -197,6 +230,21 @@ export interface Api {
     answer(sessionId: string, req: AnswerRequest): Promise<AnswerResult>;
     abort(sessionId: string): Promise<void>;
   };
+  /**
+   * Copy-typing timer calibration (contract change #4). Trials show the
+   * answer text itself; the user types it. Measures the motor+perception
+   * floor so the drill deadline can sit above retrieval but below
+   * calculation (DESIGN.md "Timer calibration"). Not Leitner: no box
+   * movement, rows logged with outcome 'calibration'.
+   */
+  calibration: {
+    start(deckId: string): Promise<CalibrationStart>;
+    /** Logs all trials, computes the suggestion, applies it to the deck's
+     *  baseTimerMs, and stamps calibratedAt. */
+    submit(sessionId: string, trials: CalibrationTrialResult[]): Promise<CalibrationResult>;
+    /** Abandon without logging a suggestion (trials so far are discarded). */
+    abort(sessionId: string): Promise<void>;
+  };
   stats: {
     deck(deckId: string): Promise<DeckStats>;
     cards(deckId: string): Promise<CardStats[]>;
@@ -217,6 +265,9 @@ export const IPC = {
   sessionStart: 'session:start',
   sessionAnswer: 'session:answer',
   sessionAbort: 'session:abort',
+  calibrationStart: 'calibration:start',
+  calibrationSubmit: 'calibration:submit',
+  calibrationAbort: 'calibration:abort',
   statsDeck: 'stats:deck',
   statsCards: 'stats:cards',
   statsAttempts: 'stats:attempts',

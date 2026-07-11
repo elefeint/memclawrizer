@@ -187,6 +187,9 @@ export function createMockApi(): Api {
   // Archive state (contract #3, F7): deckId → ISO timestamp. Archived decks
   // stay listed (archivedAtIso set), keep stats/trophies, refuse drills.
   const archivedAt = new Map<string, string>();
+  // Calibration state (contract #4): deckId → ISO timestamp of last run.
+  const calibratedAt = new Map<string, string>();
+  const calibrationSessions = new Map<string, string>(); // sessionId → deckId
   let sessionCounter = 0;
 
   const toView = (s: MockSession, e: QueueEntry): CardView => ({
@@ -203,6 +206,7 @@ export function createMockApi(): Api {
     id: d.id,
     packId: d.id,
     archivedAtIso: archivedAt.get(d.id) ?? null,
+    calibratedAtIso: calibratedAt.get(d.id) ?? null,
     name: d.name,
     description: d.description,
     cardCount: d.cards.length,
@@ -321,6 +325,52 @@ export function createMockApi(): Api {
       abort: async (sessionId) => {
         const s = sessions.get(sessionId);
         if (s) s.ended = true;
+      },
+    },
+
+    calibration: {
+      start: async (deckId) => {
+        const deck = DECKS.find((d) => d.id === deckId);
+        if (!deck) throw new Error(`unknown deck ${deckId}`);
+        const id = `mock-calibration-${++sessionCounter}`;
+        calibrationSessions.set(id, deckId);
+        return {
+          sessionId: id,
+          trials: deck.cards.map((c) => ({ cardId: c.id, text: c.answers[0] })),
+        };
+      },
+      submit: async (sessionId, trials) => {
+        const deckId = calibrationSessions.get(sessionId);
+        if (deckId === undefined) throw new Error(`unknown calibration ${sessionId}`);
+        calibrationSessions.delete(sessionId);
+        // Mirror of the real math (DESIGN.md "Timer calibration"): floor =
+        // median elapsed of correctly copied trials; window = floor + 1200ms
+        // retrieval allowance; base = window / box-1 multiplier (1.5),
+        // rounded to 100ms, clamped [1500, 10000].
+        const ok = trials
+          .filter((t) => isCorrect(t.response, [t.text]))
+          .map((t) => t.elapsedMs)
+          .sort((a, b) => a - b);
+        const floorMs =
+          ok.length === 0
+            ? 0
+            : ok.length % 2 === 1
+              ? ok[(ok.length - 1) / 2]
+              : Math.round((ok[ok.length / 2 - 1] + ok[ok.length / 2]) / 2);
+        const applied = ok.length >= 3;
+        const suggestedBaseTimerMs = Math.min(
+          10000,
+          Math.max(1500, Math.round((floorMs + 1200) / 1.5 / 100) * 100),
+        );
+        if (applied) {
+          const deck = DECKS.find((d) => d.id === deckId);
+          if (deck) deck.settings = { ...deck.settings, baseTimerMs: suggestedBaseTimerMs };
+          calibratedAt.set(deckId, new Date().toISOString());
+        }
+        return { floorMs, suggestedBaseTimerMs, appliedToSettings: applied };
+      },
+      abort: async (sessionId) => {
+        calibrationSessions.delete(sessionId);
       },
     },
 

@@ -51,6 +51,23 @@ requests go in the section below.
   looser tail trim (clips 0.25–0.61 s, median 0.39 s — was 0.14–0.26 s,
   "too short to catch").
 
+## New milestones (2026-07-11): timer calibration (DESIGN.md "Timer calibration")
+- [ ] B8 [backend]: schema v4 (sessions.kind TEXT DEFAULT 'drill'); calibration
+      ipc (start samples ~10 cards' canonical answers with injected rng;
+      submit logs attempts rows outcome='calibration' box_before=box_after,
+      session kind='calibration', computes floor/suggestion per DESIGN math,
+      applies baseTimerMs to settings, stamps calibration; abort discards);
+      deckSummaries.calibratedAtIso = latest calibration session end (replace
+      stub in stats.ts); stats medians + trophies queries exclude
+      calibration rows/sessions; migration + gates.
+- [ ] F8 [frontend]: calibration screen (no claw/timer/sounds; "type what you
+      see" trials, Enter submits, mistyped trial repeats, progress dots);
+      auto-runs when Drill is clicked on a deck with calibratedAtIso null,
+      then flows into the drill (tag selection carried through); result
+      announcement ("floor 1.4s → timer set to 2.5s"); Recalibrate button in
+      deck Settings; skippable (skip = proceed to drill, re-offered next
+      time); mock already implements the math — extend/tests/CDP both themes.
+
 ## New milestones (2026-07-10): archivable decks (DESIGN.md "Deck lifecycle")
 - [x] B7 [backend]: schema v3 (decks.pack_id backfilled = id, decks.archived_at
       NULL); queries expose both + archive/unarchive updates; import matches

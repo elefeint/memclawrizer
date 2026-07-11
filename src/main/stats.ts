@@ -57,6 +57,8 @@ export async function deckSummaries(conn: DuckDBConnection, now: Date): Promise<
       id: deck.id,
       packId: deck.packId,
       archivedAtIso: toIsoOrNull(deck.archivedAtMs),
+      // Stub until B8 lands calibration sessions — contract #4.
+      calibratedAtIso: null,
       name: deck.name,
       description: deck.description,
       cardCount: cards.length,
