@@ -23,8 +23,12 @@ import * as audio from '../audio';
 import * as T from '../timings';
 
 export interface Nav {
-  home(): void;
+  /** F8: `announce` shows one message in the home status line after mount. */
+  home(announce?: string): void;
   drill(deckId: string, tags?: string[]): void;
+  /** F8 copy-typing warm-up: 'pre-drill' flows into the drill (carrying the
+   *  tag selection), 'recalibrate' returns home with an announcement. */
+  calibrate(deckId: string, tags: string[] | undefined, mode: 'pre-drill' | 'recalibrate'): void;
   stats(deckId: string): void;
 }
 

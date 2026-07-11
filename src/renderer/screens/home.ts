@@ -62,7 +62,11 @@ function boxMiniBar(boxCounts: DeckSummary['boxCounts']): HTMLElement {
   return bar;
 }
 
-export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void> {
+export async function mountHome(
+  root: HTMLElement,
+  nav: Nav,
+  announce?: string,
+): Promise<() => void> {
   const screen = el('div', 'home', TESTIDS.homeScreen);
 
   const header = el('header', 'home-header');
@@ -103,6 +107,15 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
     status.textContent = text;
     status.hidden = false;
   }
+  if (announce) say(announce); // e.g. a recalibration result carried home (F8)
+
+  /** F8: an uncalibrated deck gets the copy-typing warm-up first; the drill
+   *  intent (deck + tags) rides along and the drill starts automatically
+   *  after the result line. A skipped warm-up is re-offered next time. */
+  function startDrill(deck: DeckSummary, tags?: string[]): void {
+    if (deck.calibratedAtIso === null) nav.calibrate(deck.id, tags, 'pre-drill');
+    else nav.drill(deck.id, tags);
+  }
 
   importBtn.addEventListener('click', () => {
     void api.decks.import().then((result) => {
@@ -129,7 +142,7 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
 
     const actions = el('div', 'deck-actions');
     actions.append(
-      button('Drill', () => nav.drill(deck.id), 'drill-button'),
+      button('Drill', () => startDrill(deck), 'drill-button'),
       button('Stats', () => nav.stats(deck.id)),
       button('Export', () => {
         void api.decks.export(deck.id).then((path) => {
@@ -160,7 +173,7 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
       form.appendChild(
         button('Drill selected', () => {
           const tags = boxes.filter((b) => b.checked).map((b) => b.value);
-          nav.drill(deck.id, tags.length > 0 ? tags : undefined);
+          startDrill(deck, tags.length > 0 ? tags : undefined);
         }),
       );
       details.appendChild(form);
@@ -218,6 +231,13 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
             details.open = false;
           });
         }),
+        // F8: re-run the copy-typing warm-up (fingers change, keyboards
+        // change). Returns home afterwards with the result announced.
+        button(
+          'Recalibrate timer',
+          () => nav.calibrate(deck.id, undefined, 'recalibrate'),
+          'recalibrate-button',
+        ),
         // Archive lives inside the settings disclosure on purpose: two clicks
         // away from the drill flow, misclick-resistant. No confirm dialog —
         // archiving is reversible (Unarchive in the section below).

@@ -119,3 +119,71 @@ describe('mock api deck archiving (contract change #3, F7)', () => {
     expect(after).toEqual(before); // perfection is forever
   });
 });
+
+describe('mock api timer calibration (contract change #4, F8)', () => {
+  const trial = (cardId: string, text: string, response: string, elapsedMs: number) => ({
+    cardId,
+    text,
+    response,
+    elapsedMs,
+  });
+
+  it('start hands out canonical answers to copy-type', async () => {
+    const api = createMockApi();
+    const { sessionId, trials } = await api.calibration.start('mock-kana');
+    expect(sessionId).toMatch(/^mock-calibration-/);
+    expect(trials.map((t) => t.text)).toEqual(['shi', 'ka', 'n', 'xyzzy']);
+  });
+
+  it('submit: floor = median of CLEAN trials only; suggestion applied and drill picks it up', async () => {
+    const api = createMockApi();
+    const { sessionId, trials } = await api.calibration.start('mock-kana');
+
+    // One mistype (huge elapsed) + its clean repeat: the 5000ms outlier must
+    // not move the floor. Clean elapsed: 1200, 1400, 1600, 1400 → median 1400.
+    const r = await api.calibration.submit(sessionId, [
+      trial(trials[0].cardId, trials[0].text, 'sji', 5000), // mistype — excluded
+      trial(trials[1].cardId, trials[1].text, trials[1].text, 1200),
+      trial(trials[2].cardId, trials[2].text, trials[2].text, 1600),
+      trial(trials[3].cardId, trials[3].text, trials[3].text, 1400),
+      trial(trials[0].cardId, trials[0].text, trials[0].text, 1400), // the repeat
+    ]);
+    expect(r.floorMs).toBe(1400);
+    // (1400 + 1200) / 1.5 = 1733 → rounded to 1700, within [1500, 10000].
+    expect(r.suggestedBaseTimerMs).toBe(1700);
+    expect(r.appliedToSettings).toBe(true);
+
+    // The deck is stamped and the NEXT drill reads the new timer.
+    const deck = (await api.decks.list()).find((d) => d.id === 'mock-kana');
+    expect(deck?.calibratedAtIso).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(deck?.settings.baseTimerMs).toBe(1700);
+    const start = await api.session.start('mock-kana');
+    expect(start.first?.timerMs).toBe(1700);
+  });
+
+  it('too few clean trials: suggestion NOT applied, deck stays uncalibrated', async () => {
+    const api = createMockApi();
+    const { sessionId } = await api.calibration.start('mock-kana');
+    const r = await api.calibration.submit(sessionId, [
+      trial('shi', 'shi', 'shi', 1000),
+      trial('ka', 'ka', 'oops', 1000),
+      trial('n', 'n', 'oops', 1000),
+      trial('mock-hard', 'xyzzy', 'oops', 1000),
+    ]);
+    expect(r.appliedToSettings).toBe(false);
+    const deck = (await api.decks.list()).find((d) => d.id === 'mock-kana');
+    expect(deck?.calibratedAtIso).toBeNull();
+    expect(deck?.settings.baseTimerMs).toBe(5000); // untouched
+  });
+
+  it('abort discards the run: settings and calibratedAtIso unchanged', async () => {
+    const api = createMockApi();
+    const { sessionId } = await api.calibration.start('mock-piano');
+    await api.calibration.abort(sessionId);
+    const deck = (await api.decks.list()).find((d) => d.id === 'mock-piano');
+    expect(deck?.calibratedAtIso).toBeNull();
+    expect(deck?.settings.baseTimerMs).toBe(7000);
+    // The session is gone — a late submit is rejected.
+    await expect(api.calibration.submit(sessionId, [])).rejects.toThrow(/unknown calibration/);
+  });
+});

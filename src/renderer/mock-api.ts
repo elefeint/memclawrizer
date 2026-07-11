@@ -182,6 +182,10 @@ function seedTrophies(): TrophyView[] {
 }
 
 export function createMockApi(): Api {
+  // Per-instance deck state: settings are mutable (updateSettings,
+  // calibration), so each mock instance gets its own copies — tests stay
+  // independent of each other and of module evaluation order.
+  const decks: MockDeck[] = DECKS.map((d) => ({ ...d, settings: { ...d.settings } }));
   const sessions = new Map<string, MockSession>();
   const trophies: TrophyView[] = seedTrophies();
   // Archive state (contract #3, F7): deckId → ISO timestamp. Archived decks
@@ -219,7 +223,7 @@ export function createMockApi(): Api {
 
   return {
     decks: {
-      list: async () => DECKS.map(summary),
+      list: async () => decks.map(summary),
       import: async () => ({
         deckId: 'mock-imported',
         name: 'Pretend import',
@@ -236,14 +240,14 @@ export function createMockApi(): Api {
         archivedAt.delete(deckId);
       },
       updateSettings: async (deckId, settings) => {
-        const d = DECKS.find((x) => x.id === deckId);
+        const d = decks.find((x) => x.id === deckId);
         if (d) d.settings = { ...settings };
       },
     },
 
     session: {
       start: async (deckId): Promise<SessionStart> => {
-        const deck = DECKS.find((d) => d.id === deckId);
+        const deck = decks.find((d) => d.id === deckId);
         if (!deck) throw new Error(`unknown deck ${deckId}`);
         // Mirrors B7: archived decks are not drillable (contract change #3).
         if (archivedAt.has(deckId)) throw new Error(`deck ${deckId} is archived`);
@@ -330,7 +334,7 @@ export function createMockApi(): Api {
 
     calibration: {
       start: async (deckId) => {
-        const deck = DECKS.find((d) => d.id === deckId);
+        const deck = decks.find((d) => d.id === deckId);
         if (!deck) throw new Error(`unknown deck ${deckId}`);
         const id = `mock-calibration-${++sessionCounter}`;
         calibrationSessions.set(id, deckId);
@@ -363,7 +367,7 @@ export function createMockApi(): Api {
           Math.max(1500, Math.round((floorMs + 1200) / 1.5 / 100) * 100),
         );
         if (applied) {
-          const deck = DECKS.find((d) => d.id === deckId);
+          const deck = decks.find((d) => d.id === deckId);
           if (deck) deck.settings = { ...deck.settings, baseTimerMs: suggestedBaseTimerMs };
           calibratedAt.set(deckId, new Date().toISOString());
         }
@@ -388,7 +392,7 @@ export function createMockApi(): Api {
         ],
       }),
       cards: async (deckId) => {
-        const deck = DECKS.find((d) => d.id === deckId);
+        const deck = decks.find((d) => d.id === deckId);
         return (deck?.cards ?? []).map((c, i) => ({
           cardId: c.id,
           promptPreview: c.promptText ?? `[${c.promptType}]`,
