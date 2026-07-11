@@ -4,16 +4,23 @@
  * the pure modules; this file is Electron glue only.
  */
 import { BrowserWindow, dialog, ipcMain } from 'electron';
-import type { AnswerRequest, AttemptFilter, DeckSettings } from '../shared/api';
+import type {
+  AnswerRequest,
+  AttemptFilter,
+  CalibrationTrialResult,
+  DeckSettings,
+} from '../shared/api';
 import { IPC } from '../shared/api';
 import type { Db } from './db';
 import { importPack, exportPack } from './packs';
 import { archiveDeck, removeDeck, unarchiveDeck, updateDeckSettings } from './queries';
+import { CalibrationManager } from './calibration';
 import { SessionManager } from './sessions';
 import { attemptRows, cardStats, deckStats, deckSummaries, trophyViews } from './stats';
 
 export function registerIpc(db: Db, sessions: SessionManager): void {
   const conn = db.conn;
+  const calibration = new CalibrationManager(conn);
 
   ipcMain.handle(IPC.decksList, () => deckSummaries(conn, new Date()));
 
@@ -61,6 +68,14 @@ export function registerIpc(db: Db, sessions: SessionManager): void {
   );
 
   ipcMain.handle(IPC.sessionAbort, (_e, sessionId: string) => sessions.abort(sessionId));
+
+  ipcMain.handle(IPC.calibrationStart, (_e, deckId: string) => calibration.start(deckId));
+
+  ipcMain.handle(IPC.calibrationSubmit, (_e, sessionId: string, trials: CalibrationTrialResult[]) =>
+    calibration.submit(sessionId, trials),
+  );
+
+  ipcMain.handle(IPC.calibrationAbort, (_e, sessionId: string) => calibration.abort(sessionId));
 
   ipcMain.handle(IPC.statsDeck, (_e, deckId: string) => deckStats(conn, deckId, new Date()));
 

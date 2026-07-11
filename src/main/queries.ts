@@ -120,6 +120,8 @@ export interface SessionInsert {
   startedAtMs: number;
   tagFilter: string[] | null;
   settings: DeckSettings;
+  /** v4: 'drill' (default) or 'calibration'; NULL in pre-v4 rows = 'drill'. */
+  kind?: 'drill' | 'calibration';
 }
 
 export interface AttemptInsert {
@@ -440,16 +442,47 @@ export async function insertSession(
   session: SessionInsert,
 ): Promise<void> {
   await conn.run(
-    `INSERT INTO sessions (id, deck_id, started_at, ended_at, tag_filter, settings, perfect, jar)
-     VALUES ($1, $2, $3, NULL, $4, $5, NULL, NULL)`,
+    `INSERT INTO sessions (id, deck_id, started_at, ended_at, tag_filter, settings, perfect, jar, kind)
+     VALUES ($1, $2, $3, NULL, $4, $5, NULL, NULL, $6)`,
     [
       session.id,
       session.deckId,
       msToTimestamp(session.startedAtMs),
       session.tagFilter === null ? null : JSON.stringify(session.tagFilter),
       JSON.stringify(session.settings),
+      session.kind ?? 'drill',
     ],
   );
+}
+
+/**
+ * Marks a calibration session as completed-with-suggestion. Discarded or
+ * insufficient runs keep ended_at NULL — deckSummaries.calibratedAtIso is
+ * the latest ENDED calibration session, so only applied runs count.
+ */
+export async function closeCalibrationSession(
+  conn: DuckDBConnection,
+  id: string,
+  endedAtMs: number,
+): Promise<void> {
+  await conn.run('UPDATE sessions SET ended_at = $1 WHERE id = $2', [
+    msToTimestamp(endedAtMs),
+    id,
+  ]);
+}
+
+/** Latest applied calibration for a deck (see closeCalibrationSession). */
+export async function latestCalibrationEndMs(
+  conn: DuckDBConnection,
+  deckId: string,
+): Promise<number | null> {
+  const reader = await conn.runAndReadAll(
+    `SELECT max(ended_at) FROM sessions
+     WHERE deck_id = $1 AND kind = 'calibration' AND ended_at IS NOT NULL`,
+    [deckId],
+  );
+  const v = reader.getRows()[0][0];
+  return v === null ? null : timestampToMs(v);
 }
 
 /** jar is persisted only for perfect sessions (DESIGN.md schema comment). */
@@ -478,7 +511,8 @@ export async function listTrophies(conn: DuckDBConnection): Promise<TrophyRow[]>
   const reader = await conn.runAndReadAll(
     `SELECT s.id, s.deck_id, coalesce(d.name, s.deck_id), s.ended_at, s.jar
      FROM sessions s LEFT JOIN decks d ON d.id = s.deck_id
-     WHERE s.perfect ORDER BY s.ended_at DESC`,
+     WHERE s.perfect AND coalesce(s.kind, 'drill') = 'drill'
+     ORDER BY s.ended_at DESC`,
   );
   return reader.getRows().map((r) => ({
     sessionId: asString(r[0]),

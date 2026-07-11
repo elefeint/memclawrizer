@@ -15,7 +15,14 @@ import type {
 } from '../shared/api';
 import { buildSessionQueue } from './leitner';
 import type { CardRow, CardStateRow } from './queries';
-import { listAttempts, listCards, listCardStates, listDecks, listTrophies } from './queries';
+import {
+  latestCalibrationEndMs,
+  listAttempts,
+  listCards,
+  listCardStates,
+  listDecks,
+  listTrophies,
+} from './queries';
 
 function toIso(ms: number): string {
   return new Date(ms).toISOString();
@@ -57,8 +64,7 @@ export async function deckSummaries(conn: DuckDBConnection, now: Date): Promise<
       id: deck.id,
       packId: deck.packId,
       archivedAtIso: toIsoOrNull(deck.archivedAtMs),
-      // Stub until B8 lands calibration sessions — contract #4.
-      calibratedAtIso: null,
+      calibratedAtIso: toIsoOrNull(await latestCalibrationEndMs(conn, deck.id)),
       name: deck.name,
       description: deck.description,
       cardCount: cards.length,
@@ -99,7 +105,8 @@ export async function deckStats(
 
   const medians = await conn.runAndReadAll(
     `SELECT strftime(shown_at, '%Y-%m-%d') AS day, median(elapsed_ms)
-     FROM attempts WHERE deck_id = $1 GROUP BY day ORDER BY day`,
+     FROM attempts WHERE deck_id = $1 AND outcome != 'calibration'
+     GROUP BY day ORDER BY day`,
     [deckId],
   );
 
@@ -122,7 +129,8 @@ export async function cardStats(conn: DuckDBConnection, deckId: string): Promise
   const stateByCard = new Map(states.map((s) => [s.cardId, s]));
 
   const medians = await conn.runAndReadAll(
-    'SELECT card_id, median(elapsed_ms) FROM attempts WHERE deck_id = $1 GROUP BY card_id',
+    `SELECT card_id, median(elapsed_ms) FROM attempts
+     WHERE deck_id = $1 AND outcome != 'calibration' GROUP BY card_id`,
     [deckId],
   );
   const medianByCard = new Map<string, number>(
