@@ -52,7 +52,7 @@ requests go in the section below.
   "too short to catch").
 
 ## New milestones (2026-07-10): archivable decks (DESIGN.md "Deck lifecycle")
-- [ ] B7 [backend]: schema v3 (decks.pack_id backfilled = id, decks.archived_at
+- [x] B7 [backend]: schema v3 (decks.pack_id backfilled = id, decks.archived_at
       NULL); queries expose both + archive/unarchive updates; import matches
       ACTIVE deck by pack_id, else creates a new deck (internal id minted
       <pack_id>#2… on collision; most-recently-imported wins if several
@@ -190,3 +190,15 @@ requests go in the section below.
   profile DB v1→v2 (267 attempts, 20 sessions, 3 trophies intact); e2e
   smoke passes against the new package. For F6: answerMediaUrl is a
   mem:// URL — <audio> element only, fetch() fails by scheme.
+- 2026-07-11 [backend] B7 done. Schema v3 (pack_id backfilled = id,
+  archived_at); import matches the ACTIVE deck by pack_id (most recently
+  imported wins) and otherwise mints <pack_id>#2/#3... — archived decks'
+  history is frozen; export emits pack_id so round-trips keep the author id;
+  session.start on archived decks throws "... is archived — unarchive it to
+  drill"; deckSummaries fills real packId/archivedAtIso (stubs replaced);
+  decks:archive/decks:unarchive handled. Gates: 157 unit/DB tests + tsc +
+  lint green; packaged app migrated a COPY of the real profile v2→v3 (330
+  attempts, 23 sessions, 4 trophies intact, pack_id backfilled on all 5
+  decks); e2e smoke passes. Note for F7: decks.list still returns archived
+  decks (archivedAtIso non-null) — filter for the active list, render the
+  rest in the Archived section.
