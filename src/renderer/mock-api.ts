@@ -110,7 +110,7 @@ const DECKS: MockDeck[] = [
     id: 'mock-kana',
     name: 'Mock kana (4 cards)',
     description: 'Text prompts; includes an unguessable card to exercise failure paths.',
-    settings: { baseTimerMs: 5000, newCardsPerSession: 5 },
+    settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
     cards: [
       { id: 'shi', promptType: 'text', promptText: 'し', mediaUrl: null, answerMediaUrl: SHI_WAV, answers: ['shi', 'si'], hint: 'she has a fishing hook', tags: ['hiragana'] },
       { id: 'ka', promptType: 'text', promptText: 'か', mediaUrl: null, answerMediaUrl: KA_WAV, answers: ['ka'], hint: null, tags: ['hiragana'] },
@@ -122,7 +122,7 @@ const DECKS: MockDeck[] = [
     id: 'mock-piano',
     name: 'Mock piano (1 card)',
     description: 'One data:-SVG staff image; a perfect session is one answer away.',
-    settings: { baseTimerMs: 7000, newCardsPerSession: 5 },
+    settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10 },
     cards: [
       { id: 'treble-c4', promptType: 'image', promptText: null, mediaUrl: STAFF_SVG, answerMediaUrl: null, answers: ['c4', 'c'], hint: 'one ledger line below the staff — middle C', tags: ['treble'] },
     ],

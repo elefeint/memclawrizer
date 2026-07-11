@@ -187,7 +187,7 @@ function kanaDeck(script: 'hiragana' | 'katakana'): GeneratedPack {
     description:
       `All ${script} (46 base + voiced/semi-voiced + yōon digraphs) to be answered ` +
       'in romaji. Hepburn plus common variants accepted.',
-    settings: { baseTimerMs: 5000, newCardsPerSession: 5 },
+    settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
     cards,
   });
   files.set('deck.json', new TextEncoder().encode(deckJson));

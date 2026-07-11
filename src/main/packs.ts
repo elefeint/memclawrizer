@@ -17,6 +17,7 @@ import path from 'node:path';
 import { unzipSync, zipSync, type Zippable } from 'fflate';
 import type { DuckDBConnection } from '@duckdb/node-api';
 import type { DeckSettings, ImportResult, PromptType } from '../shared/api';
+import { DEFAULT_MAX_BOX1_FOR_NEW } from '../shared/api';
 import { normalizeAnswer } from '../shared/normalize';
 import {
   deleteUnreferencedMedia,
@@ -183,6 +184,11 @@ export function parsePackJson(text: string): ParsedPack {
   const settings: DeckSettings = {
     baseTimerMs: reqPositiveInt(s.base_timer_ms, 'settings.base_timer_ms'),
     newCardsPerSession: reqPositiveInt(s.new_cards_per_session, 'settings.new_cards_per_session'),
+    // Optional (added 2026-07-10); packs without it get the default gate.
+    maxBox1ForNew:
+      s.max_box1_for_new === undefined
+        ? DEFAULT_MAX_BOX1_FOR_NEW
+        : reqPositiveInt(s.max_box1_for_new, 'settings.max_box1_for_new'),
   };
 
   if (!Array.isArray(d.cards)) fail('cards', 'must be an array');
@@ -402,6 +408,7 @@ export function buildDeckJson(deck: {
       settings: {
         base_timer_ms: deck.settings.baseTimerMs,
         new_cards_per_session: deck.settings.newCardsPerSession,
+        max_box1_for_new: deck.settings.maxBox1ForNew,
       },
       cards: deck.cards,
     },

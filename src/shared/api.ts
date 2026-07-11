@@ -13,7 +13,18 @@ export type Outcome = 'correct' | 'wrong' | 'timeout';
 export interface DeckSettings {
   baseTimerMs: number;
   newCardsPerSession: number;
+  /**
+   * Don't introduce new cards while box 1 already holds at least this many
+   * due cards (within the drilled scope); below that, introduce only up to
+   * the remaining box-1 capacity. Keeps the struggling set bounded: no new
+   * material while drowning in failures. (Contract change #2, additive,
+   * coordinator-approved 2026-07-10.)
+   */
+  maxBox1ForNew: number;
 }
+
+/** Default box-1 capacity gate for decks/packs that don't specify one. */
+export const DEFAULT_MAX_BOX1_FOR_NEW = 10;
 
 export interface DeckSummary {
   id: string;

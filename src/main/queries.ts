@@ -18,6 +18,7 @@ import {
   timestampValue,
 } from '@duckdb/node-api';
 import type { DeckSettings, Outcome } from '../shared/api';
+import { DEFAULT_MAX_BOX1_FOR_NEW } from '../shared/api';
 
 // ---------------------------------------------------------------------------
 // Value conversion
@@ -159,10 +160,16 @@ function deckFromRow(r: DuckDBValue[]): DeckRow {
     id: asString(r[0]),
     name: asString(r[1]),
     description: asStringOrNull(r[2]),
-    settings: asJson<DeckSettings>(r[3]),
+    // Rows written before a settings field existed (maxBox1ForNew, added
+    // 2026-07-10) pick up the default at read time.
+    settings: withSettingsDefaults(asJson<DeckSettings>(r[3])),
     formatVersion: asNumber(r[4]),
     importedAtMs: timestampToMs(r[5]),
   };
+}
+
+function withSettingsDefaults(stored: DeckSettings): DeckSettings {
+  return { ...stored, maxBox1ForNew: stored.maxBox1ForNew ?? DEFAULT_MAX_BOX1_FOR_NEW };
 }
 
 const DECK_COLS = 'id, name, description, settings, format_version, imported_at';

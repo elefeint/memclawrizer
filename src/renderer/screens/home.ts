@@ -182,13 +182,26 @@ export async function mountHome(root: HTMLElement, nav: Nav): Promise<() => void
       newCards.value = String(deck.settings.newCardsPerSession);
       newLabel.appendChild(newCards);
 
+      const gateLabel = el('label');
+      gateLabel.append(document.createTextNode('pause new cards at box-1 ≥ '));
+      const gate = el('input');
+      gate.type = 'number';
+      gate.min = '1';
+      gate.value = String(deck.settings.maxBox1ForNew);
+      gateLabel.title =
+        'No new cards are introduced while this many cards sit in box 1 (struggling). ' +
+        'Below that, new cards fill only the remaining capacity.';
+      gateLabel.appendChild(gate);
+
       form.append(
         timerLabel,
         newLabel,
+        gateLabel,
         button('Save', () => {
           const settings = {
             baseTimerMs: Math.max(1000, Number(timer.value) || deck.settings.baseTimerMs),
             newCardsPerSession: Math.max(0, Number(newCards.value) || 0),
+            maxBox1ForNew: Math.max(1, Number(gate.value) || deck.settings.maxBox1ForNew),
           };
           void api.decks.updateSettings(deck.id, settings).then(() => {
             say(`saved settings for “${deck.name}”`);

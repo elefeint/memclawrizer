@@ -162,6 +162,13 @@ Five boxes. Intervals before a card is due again after a success:
 | 5   | 30 days |
 
 - New cards start in box 1.
+- **New-card gate (2026-07-10, from Elena's hiragana experience):** new cards
+  are introduced only while box 1 has spare capacity. Deck setting
+  `maxBox1ForNew` (default 10): if the drilled scope already has that many
+  box-1 cards due, no new cards are added; below it, new cards fill only the
+  remaining capacity (still capped by `newCardsPerSession`). Failing a lot
+  automatically pauses new material until the struggling set shrinks —
+  counted within the tag filter when drilling a subset.
 - **Only the first attempt on a card within a session moves its box** (re-queued
   retries are practice and are logged, but don't count for scheduling — otherwise
   every session would end with everything "promoted").

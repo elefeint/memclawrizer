@@ -30,7 +30,7 @@ function seededRng(seed: number): () => number {
   };
 }
 
-const settings: DeckSettings = { baseTimerMs: 5000, newCardsPerSession: 5 };
+const settings: DeckSettings = { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 99 };
 
 const card = (id: string, over: Partial<CardRow> = {}): CardRow => ({
   deckId: 'd1',
@@ -205,7 +205,7 @@ describe('buildSessionQueue', () => {
     const q = buildSessionQueue(
       [],
       cards,
-      { ...settings, newCardsPerSession: 2 },
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99 },
       null,
       NOW,
       noShuffle,
@@ -233,7 +233,7 @@ describe('buildSessionQueue', () => {
     const q = buildSessionQueue(
       [],
       cards,
-      { ...settings, newCardsPerSession: 2 },
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99 },
       ['katakana'],
       NOW,
       noShuffle,
@@ -279,7 +279,7 @@ describe('buildSessionQueue', () => {
   it('mixes due and new cards into one shuffled queue', () => {
     const cards = [card('new1'), card('due1'), card('new2')];
     const states = [state('due1', { box: 2, dueAtMs: NOW_MS - 1 })];
-    const q = buildSessionQueue(states, cards, { ...settings, newCardsPerSession: 5 }, null, NOW, seededRng(1));
+    const q = buildSessionQueue(states, cards, { ...settings, newCardsPerSession: 5, maxBox1ForNew: 99 }, null, NOW, seededRng(1));
     expect(q.map((x) => x.card.id).sort()).toEqual(['due1', 'new1', 'new2']);
     const due1 = q.find((x) => x.card.id === 'due1');
     expect(due1?.box).toBe(2);
@@ -290,5 +290,89 @@ describe('buildSessionQueue', () => {
     const cards = [card('a')];
     const states = [state('a', { box: 4, dueAtMs: NOW_MS + DAY })];
     expect(buildSessionQueue(states, cards, settings, null, NOW, noShuffle)).toEqual([]);
+  });
+});
+
+describe('new-card gate (maxBox1ForNew)', () => {
+  const noShuffle = () => 0.999999;
+
+  it('introduces no new cards while box 1 is at or over the threshold', () => {
+    const cards = [card('s1'), card('s2'), card('s3'), card('n1')];
+    const states = [
+      state('s1', { box: 1 }),
+      state('s2', { box: 1 }),
+      state('s3', { box: 1 }),
+    ];
+    const q = buildSessionQueue(
+      states,
+      cards,
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3 },
+      null,
+      NOW,
+      noShuffle,
+    );
+    expect(q.map((x) => x.card.id)).toEqual(['s1', 's2', 's3']);
+    expect(q.some((x) => x.isNew)).toBe(false);
+  });
+
+  it('fills only the remaining box-1 capacity, capped by newCardsPerSession', () => {
+    const cards = [card('s1'), card('s2'), card('n1'), card('n2'), card('n3')];
+    const states = [state('s1', { box: 1 }), state('s2', { box: 1 })];
+    // capacity 5 - 2 = 3, but per-session cap is 2 → 2 new
+    let q = buildSessionQueue(
+      states,
+      cards,
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 5 },
+      null,
+      NOW,
+      noShuffle,
+    );
+    expect(q.filter((x) => x.isNew).map((x) => x.card.id)).toEqual(['n1', 'n2']);
+    // capacity 3 - 2 = 1, per-session cap 5 → 1 new
+    q = buildSessionQueue(
+      states,
+      cards,
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3 },
+      null,
+      NOW,
+      noShuffle,
+    );
+    expect(q.filter((x) => x.isNew).map((x) => x.card.id)).toEqual(['n1']);
+  });
+
+  it('counts only box-1 cards against capacity — higher due boxes are not "struggling"', () => {
+    const cards = [card('b2'), card('b5'), card('n1'), card('n2')];
+    const states = [
+      state('b2', { box: 2, dueAtMs: NOW_MS }),
+      state('b5', { box: 5, dueAtMs: NOW_MS }),
+    ];
+    const q = buildSessionQueue(
+      states,
+      cards,
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2 },
+      null,
+      NOW,
+      noShuffle,
+    );
+    expect(q.filter((x) => x.isNew).map((x) => x.card.id)).toEqual(['n1', 'n2']);
+  });
+
+  it('counts box-1 cards within the tag filter only', () => {
+    const cards = [
+      card('s-kat', { tags: ['katakana'] }),
+      card('s-hira', { tags: ['hiragana'] }),
+      card('n-kat', { tags: ['katakana'] }),
+    ];
+    const states = [state('s-kat', { box: 1 }), state('s-hira', { box: 1 })];
+    // Drilling katakana only: 1 box-1 card in scope, threshold 2 → 1 slot free.
+    const q = buildSessionQueue(
+      states,
+      cards,
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2 },
+      ['katakana'],
+      NOW,
+      noShuffle,
+    );
+    expect(q.map((x) => x.card.id).sort()).toEqual(['n-kat', 's-kat']);
   });
 });

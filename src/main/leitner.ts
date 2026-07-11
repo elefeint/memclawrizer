@@ -125,8 +125,11 @@ function shuffle<T>(a: T[], rng: () => number): T[] {
 }
 
 /**
- * All due cards (per Leitner intervals) plus up to newCardsPerSession
- * never-seen cards (taken in the stable order of `cards`), shuffled together.
+ * All due cards (per Leitner intervals) plus never-seen cards (taken in the
+ * stable order of `cards`), shuffled together. New-card introduction is
+ * double-gated: at most newCardsPerSession, AND only up to the remaining
+ * box-1 capacity (settings.maxBox1ForNew minus the box-1 cards already due
+ * in this scope) — no new material while the struggling set is full.
  */
 export function buildSessionQueue(
   states: CardStateRow[],
@@ -139,19 +142,23 @@ export function buildSessionQueue(
   const nowMs = now.getTime();
   const stateByCard = new Map(states.map((s) => [s.cardId, s]));
   const queue: QueueCard[] = [];
-  let newBudget = Math.max(0, settings.newCardsPerSession);
+  const fresh: CardRow[] = [];
 
   for (const card of cards) {
     if (!card.active || !matchesFilter(card, tagFilter)) continue;
     const state = stateByCard.get(card.id);
     if (state === undefined) {
-      if (newBudget > 0) {
-        newBudget--;
-        queue.push({ card, box: 1, isNew: true });
-      }
+      fresh.push(card);
     } else if (isDue(state, nowMs)) {
       queue.push({ card, box: state.box, isNew: false });
     }
+  }
+
+  const box1Count = queue.filter((q) => q.box === 1).length;
+  const capacity = Math.max(0, settings.maxBox1ForNew - box1Count);
+  const newAllowed = Math.min(Math.max(0, settings.newCardsPerSession), capacity);
+  for (const card of fresh.slice(0, newAllowed)) {
+    queue.push({ card, box: 1, isNew: true });
   }
 
   return shuffle(queue, rng);

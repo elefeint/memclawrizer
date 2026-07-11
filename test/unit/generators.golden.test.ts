@@ -76,7 +76,7 @@ describe('kana decks', () => {
       expect(deck.cards.filter((c) => c.tags.includes('yoon'))).toHaveLength(33);
       expect(deck.cards.filter((c) => c.tags.includes('semi-voiced'))).toHaveLength(8); // 5 + pya/pyu/pyo
     }
-    expect(hira.settings).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5 });
+    expect(hira.settings).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 });
   });
 
   it('accept common romanization variants alongside Hepburn', () => {
@@ -121,7 +121,7 @@ describe('piano decks', () => {
         expect(Buffer.from(svg as Uint8Array).toString('utf8')).toContain('<svg');
       }
     }
-    expect(treble.deck.settings).toEqual({ baseTimerMs: 7000, newCardsPerSession: 5 });
+    expect(treble.deck.settings).toEqual({ baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10 });
   });
 
   it('accepts both octave-numbered and bare note names', () => {

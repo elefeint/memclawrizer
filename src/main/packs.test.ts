@@ -42,7 +42,7 @@ describe('parsePackJson', () => {
       }),
     );
     expect(pack.id).toBe('d');
-    expect(pack.settings).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5 });
+    expect(pack.settings).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 });
     // normalized and de-duplicated
     expect(pack.cards[0].answers).toEqual(['shi', 'si']);
     expect(pack.cards[0].tags).toEqual([]);

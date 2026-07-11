@@ -41,6 +41,15 @@ requests go in the section below.
   (spoken syllable) played during feedback/grab for both outcomes.
   Deliberately NOT on CardView (would leak the answer before the attempt).
   Additive; older backends simply never set it.
+- 2026-07-10 [coordinator] Change #2 APPROVED and applied: `DeckSettings`
+  gains required `maxBox1ForNew` (default 10 via DEFAULT_MAX_BOX1_FOR_NEW).
+  New-card introduction is gated by box-1 capacity (leitner.buildSessionQueue,
+  two-pass). Plumbed by the coordinator through packs (optional
+  `max_box1_for_new`; v1/v2 packs without it get the default), queries
+  (defaults for legacy rows), settings UI third field, generators, and mock.
+  Also: kana audio regenerated at open_jtalk -r 0.5 with 60 ms lead-in and
+  looser tail trim (clips 0.25–0.61 s, median 0.39 s — was 0.14–0.26 s,
+  "too short to catch").
 
 ## New milestones (2026-07-08): answer-side audio (pack format v2)
 - [x] B6 [backend]: PACK_FORMAT_VERSION=2 accepting v1+v2; optional card

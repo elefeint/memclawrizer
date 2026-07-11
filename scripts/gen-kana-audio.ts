@@ -32,6 +32,13 @@ const FFMPEG = path.join(os.homedir(), '.local', 'bin', 'ffmpeg');
 const JTALK_DIC = '/var/lib/mecab/dic/open-jtalk/naist-jdic';
 const JTALK_VOICE_DIR = '/usr/share/hts-voice';
 
+/**
+ * Speech speed (open_jtalk -r, 1.0 = normal). Isolated morae at 1.0 come out
+ * 0.14–0.26 s — too quick to catch during play (Elena, 2026-07-10). 0.5
+ * roughly doubles them.
+ */
+const JTALK_RATE = '0.5';
+
 function onPath(bin: string): boolean {
   try {
     execFileSync('which', [bin], { stdio: 'pipe' });
@@ -69,9 +76,11 @@ function pickEngine(): Engine | null {
       toWav: (kana, wavPath, tmpDir) => {
         const txt = path.join(tmpDir, 'in.txt');
         writeFileSync(txt, kana + '\n');
-        execFileSync(jtalkBin, ['-x', JTALK_DIC, '-m', voice, '-ow', wavPath, txt], {
-          stdio: 'pipe',
-        });
+        execFileSync(
+          jtalkBin,
+          ['-x', JTALK_DIC, '-m', voice, '-r', JTALK_RATE, '-ow', wavPath, txt],
+          { stdio: 'pipe' },
+        );
       },
     };
   }
@@ -86,7 +95,11 @@ function pickEngine(): Engine | null {
   return null;
 }
 
-/** Trim silence both ends, normalize loudness, tiny tail pad, bitexact ogg. */
+/**
+ * Trim silence both ends, normalize loudness, then re-pad: 60 ms lead-in
+ * (playback start latency must not swallow the consonant onset) and a 150 ms
+ * tail so the clip breathes instead of cutting dead. Bitexact ogg.
+ */
 function wavToOgg(wavPath: string, oggPath: string): void {
   execFileSync(
     FFMPEG,
@@ -94,9 +107,12 @@ function wavToOgg(wavPath: string, oggPath: string): void {
       '-y',
       '-i', wavPath,
       '-af',
+      // Lead trim stays tight (-45dB: crisp onset). Tail trim is looser
+      // (-50dB) so the vowel decay survives, but capped at 0.8s of speech —
+      // at -60dB some clips kept >1s of HTS noise-floor breath.
       'silenceremove=start_periods=1:start_threshold=-45dB,' +
-        'areverse,silenceremove=start_periods=1:start_threshold=-45dB,areverse,' +
-        'loudnorm=I=-18:TP=-2,apad=pad_dur=0.05',
+        'areverse,silenceremove=start_periods=1:start_threshold=-50dB,areverse,' +
+        'atrim=0:0.8,loudnorm=I=-18:TP=-2,adelay=60:all=1,apad=pad_dur=0.15',
       '-ac', '1',
       '-ar', '22050',
       '-c:a', 'libvorbis',
