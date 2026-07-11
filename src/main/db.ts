@@ -18,6 +18,7 @@ export interface Db {
 export const MIGRATIONS: Array<(conn: DuckDBConnection) => Promise<void>> = [
   migrateV1,
   migrateV2,
+  migrateV3,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
@@ -55,6 +56,15 @@ async function migrate(conn: DuckDBConnection): Promise<void> {
     await conn.run('ROLLBACK');
     throw e;
   }
+}
+
+/** v3 (2026-07-10): archivable decks — internal id splits from the pack's
+ * author id (DESIGN.md "Deck lifecycle: archiving"). Existing rows keep
+ * their id as pack_id; nothing is archived retroactively. */
+async function migrateV3(conn: DuckDBConnection): Promise<void> {
+  await conn.run('ALTER TABLE decks ADD COLUMN pack_id TEXT');
+  await conn.run('ALTER TABLE decks ADD COLUMN archived_at TIMESTAMP');
+  await conn.run('UPDATE decks SET pack_id = id');
 }
 
 /** v2 (2026-07-08): answer-side audio — pack format v2, DESIGN.md. */

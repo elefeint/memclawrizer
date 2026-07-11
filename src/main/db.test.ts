@@ -27,7 +27,8 @@ describe('openDatabase', () => {
     try {
       const db1 = await openDatabase(file);
       await db1.conn.run(
-        `INSERT INTO decks VALUES ('d1', 'Deck', NULL, '{}', 1, TIMESTAMP '2026-07-05 09:00:00')`,
+        `INSERT INTO decks (id, name, description, settings, format_version, imported_at, pack_id)
+         VALUES ('d1', 'Deck', NULL, '{}', 1, TIMESTAMP '2026-07-05 09:00:00', 'd1')`,
       );
       db1.conn.closeSync();
       db1.instance.closeSync();
@@ -64,7 +65,7 @@ describe('openDatabase', () => {
     }
   });
 
-  it('migrates a schema-v1 file to v2, preserving data and adding cards.answer_media_id', async () => {
+  it('migrates a schema-v1 file to latest, preserving data (v2 audio col, v3 pack_id backfill)', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
     const file = join(dir, 'v1.duckdb');
     try {
@@ -97,6 +98,37 @@ describe('openDatabase', () => {
       expect(cards.getRows()).toEqual([['c1', 'し', null, true]]);
       const state = await db.conn.runAndReadAll('SELECT box, lifetime_correct FROM card_state');
       expect(state.getRows()).toEqual([[3, 4]]);
+      // v3: pack_id backfilled from id, nothing archived retroactively.
+      const decks = await db.conn.runAndReadAll('SELECT id, pack_id, archived_at FROM decks');
+      expect(decks.getRows()).toEqual([['d1', 'd1', null]]);
+      db.conn.closeSync();
+      db.instance.closeSync();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it('migrates a schema-v2 file to v3, backfilling pack_id and leaving archived_at NULL', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
+    const file = join(dir, 'v2.duckdb');
+    try {
+      const instance = await DuckDBInstance.create(file);
+      const conn = await instance.connect();
+      await MIGRATIONS[0](conn);
+      await MIGRATIONS[1](conn);
+      await conn.run('CREATE TABLE schema_version(version INTEGER NOT NULL)');
+      await conn.run('INSERT INTO schema_version VALUES (2)');
+      await conn.run(
+        `INSERT INTO decks VALUES ('kana-v1', 'Kana', NULL, '{}', 2, TIMESTAMP '2026-07-09 09:00:00')`,
+      );
+      conn.closeSync();
+      instance.closeSync();
+
+      const db = await openDatabase(file);
+      const version = await db.conn.runAndReadAll('SELECT version FROM schema_version');
+      expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      const decks = await db.conn.runAndReadAll('SELECT id, pack_id, archived_at, name FROM decks');
+      expect(decks.getRows()).toEqual([['kana-v1', 'kana-v1', null, 'Kana']]);
       db.conn.closeSync();
       db.instance.closeSync();
     } finally {
