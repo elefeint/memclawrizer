@@ -218,6 +218,52 @@ button:hover {
   list-style: none;
 }
 
+/* F7: Archive sits inside the settings disclosure; push it away from Save
+   so a slipped click lands on nothing. */
+.deck-settings-body .archive-button {
+  margin-left: auto;
+  color: var(--muted);
+}
+
+/* -------------------------------------------------- archived decks ----- */
+
+.archived-section {
+  margin: 0 0 1.5rem;
+  font-size: 0.88rem;
+}
+
+.archived-section summary {
+  cursor: pointer;
+  color: var(--muted);
+  width: max-content;
+  font-family: ui-monospace, monospace;
+  letter-spacing: 0.05em;
+}
+
+.archived-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.archived-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem 1rem;
+  padding: 0.6rem 1rem;
+  border: 1px dashed var(--cabinet-edge);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--cabinet) 55%, transparent);
+}
+
+.archived-row .deck-name {
+  color: var(--muted);
+  font-weight: 500;
+}
+
 /* ----------------------------------------------------- trophy shelf ----- */
 
 .trophy-section h2 {

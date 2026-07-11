@@ -79,3 +79,43 @@ describe('mock api session semantics', () => {
     expect(trophies.filter((t) => t.deckId === 'mock-piano')).toHaveLength(10);
   });
 });
+
+describe('mock api deck archiving (contract change #3, F7)', () => {
+  it('archive stamps archivedAtIso, splitting the list; unarchive returns the deck', async () => {
+    const api = createMockApi();
+
+    // Everything starts active, with packId mirroring the deck id.
+    let decks = await api.decks.list();
+    expect(decks.every((d) => d.archivedAtIso === null)).toBe(true);
+    expect(decks.every((d) => d.packId === d.id)).toBe(true);
+
+    await api.decks.archive('mock-kana');
+    decks = await api.decks.list();
+    const kana = decks.find((d) => d.id === 'mock-kana');
+    expect(kana?.archivedAtIso).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    // Other decks stay active — the home screen splits on archivedAtIso.
+    expect(decks.find((d) => d.id === 'mock-piano')?.archivedAtIso).toBeNull();
+
+    // Archived decks are not drillable (mirrors backend B7)…
+    await expect(api.session.start('mock-kana')).rejects.toThrow(/archived/);
+    // …but their history stays reachable (the archived row keeps a Stats link).
+    const cards = await api.stats.cards('mock-kana');
+    expect(cards.length).toBeGreaterThan(0);
+
+    await api.decks.unarchive('mock-kana');
+    decks = await api.decks.list();
+    expect(decks.find((d) => d.id === 'mock-kana')?.archivedAtIso).toBeNull();
+    const start = await api.session.start('mock-kana');
+    expect(start.queueLength).toBe(4);
+  });
+
+  it('keeps an archived deck’s trophies on the shelf', async () => {
+    const api = createMockApi();
+    const before = (await api.stats.trophies()).filter((t) => t.deckId === 'mock-piano');
+    expect(before).toHaveLength(9); // the seeds
+
+    await api.decks.archive('mock-piano');
+    const after = (await api.stats.trophies()).filter((t) => t.deckId === 'mock-piano');
+    expect(after).toEqual(before); // perfection is forever
+  });
+});
