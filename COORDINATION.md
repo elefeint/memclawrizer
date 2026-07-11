@@ -60,7 +60,7 @@ requests go in the section below.
       deckSummaries.calibratedAtIso = latest calibration session end (replace
       stub in stats.ts); stats medians + trophies queries exclude
       calibration rows/sessions; migration + gates.
-- [ ] F8 [frontend]: calibration screen (no claw/timer/sounds; "type what you
+- [x] F8 [frontend]: calibration screen (no claw/timer/sounds; "type what you
       see" trials, Enter submits, mistyped trial repeats, progress dots);
       auto-runs when Drill is clicked on a deck with calibratedAtIso null,
       then flows into the drill (tag selection carried through); result
@@ -247,3 +247,27 @@ requests go in the section below.
   attempt log filterable by outcome='calibration'. Gates: 171 tests + tsc +
   lint; packaged app migrated real-profile COPY v3→v4 (330 attempts, 23
   drill sessions, 4 trophies intact); e2e smoke green.
+- 2026-07-11 [frontend] F8 done. screens/calibrate.ts (calm: no claw/timer/
+  sounds; big answer text, Enter submits, elapsed = performance.now() from
+  display to Enter; mistype re-queues to the END and every attempt goes in
+  the submit batch; progress dots; Esc = abort + proceed unchanged). Pure
+  queue logic in calibration-queue.ts (unit-tested). Home routes Drill and
+  Drill-by-tag through the warm-up when calibratedAtIso is null (drill
+  intent incl. tags carried through); result line holds CALIBRATE_RESULT_MS
+  (timings.ts, 2600) then the drill starts on the fresh settings.
+  "Recalibrate timer" in each Settings block returns home announcing via
+  the status line (nav.home/mountHome gained an optional announce arg).
+  Mock: per-instance deck copies (settings mutations no longer leak across
+  createMockApi() instances — was module-level) + 4 calibration spec tests
+  (clean-median floor, suggestion math incl. the 1700 example, <3-clean
+  not-applied branch, abort discards; session.start returns the new
+  timerMs). CDP-verified BOTH themes + a skip run (22 assertions, 11
+  screenshots): timer pickup asserted via the claw's travel transition —
+  `transform <ms>ms linear` on .claw — equal to the suggested ms parsed
+  from the result line (5000 → 1800 in the run), persisted on the next
+  drill, no re-prompt once calibrated; recalibrating 1-card mock-piano
+  exercises the too-few-clean-trials branch end-to-end. New classes (no
+  testids, frozen): .calibrate, .calibrate-text/-input/-dots/-note/-result,
+  .recalibrate-button. Integration note: renderer expects backend
+  calibration.start to sample ANSWER texts and submit to apply settings +
+  stamp calibratedAt exactly like the mock. 167 tests + tsc + lint green.

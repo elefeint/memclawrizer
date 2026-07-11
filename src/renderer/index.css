@@ -264,6 +264,105 @@ button:hover {
   font-weight: 500;
 }
 
+/* --------------------------------------------- calibration warm-up ----- */
+/* F8. Deliberately unlike the drill: no cabinet, no rail, no accent
+   urgency — a quiet centered column. It measures; it doesn't perform. */
+
+.calibrate {
+  min-height: 100vh;
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 14vh 2rem 2rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.4rem;
+  text-align: center;
+}
+
+.calibrate-header h1 {
+  font-size: 1.15rem;
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  letter-spacing: 0.06em;
+  font-weight: 500;
+  margin: 0 0 0.3rem;
+}
+
+.calibrate-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.calibrate-dots {
+  display: flex;
+  gap: 0.5rem;
+  min-height: 10px;
+}
+
+.calibrate-dots .dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1px solid var(--jar-line);
+  background: transparent;
+}
+
+.calibrate-dots .dot.done {
+  background: var(--good);
+  border-color: var(--good);
+}
+
+.calibrate-text {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: clamp(2.4rem, 9vh, 4.5rem);
+  line-height: 1.2;
+  min-height: 1.2em;
+}
+
+.calibrate-input {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-size: 1.5rem;
+  text-align: center;
+  width: min(420px, 85%);
+  padding: 0.45rem 0.8rem;
+  color: var(--fg);
+  background: var(--bg);
+  border: 2px solid var(--jar-line);
+  border-radius: 10px;
+  outline: none;
+}
+
+.calibrate-input:focus {
+  border-color: var(--steel); /* calm focus — the accent is drill urgency */
+}
+
+.calibrate-input:disabled {
+  opacity: 0.55;
+}
+
+.calibrate-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  font-style: italic;
+  min-height: 1.2em;
+}
+
+.calibrate-result {
+  margin: 0;
+  color: var(--good);
+  font-family: ui-monospace, monospace;
+  font-size: 1.05rem;
+}
+
+.calibrate-skip-hint {
+  margin-top: auto;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-family: ui-monospace, monospace;
+}
+
 /* ----------------------------------------------------- trophy shelf ----- */
 
 .trophy-section h2 {

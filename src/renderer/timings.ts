@@ -40,6 +40,11 @@ export const CONSOLIDATE_GHOST_MS = 520;
 export const CONSOLIDATE_STAGGER_MS = 90;
 export const CONSOLIDATE_POP_MS = 420;
 
+/** Calibration result line ("your floor …") stays up this long before the
+ * flow continues into the drill (or back home). Calm, readable, skippable
+ * by nobody — it's the one moment the mechanism explains itself. */
+export const CALIBRATE_RESULT_MS = 2600;
+
 /**
  * TICK cadence fallback alongside requestAnimationFrame. rAF freezes when the
  * window is occluded/minimized; a plain interval keeps the machine's clock —
