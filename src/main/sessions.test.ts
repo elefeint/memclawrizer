@@ -266,6 +266,23 @@ describe('SessionManager', () => {
     await sm.abort('session-1');
   });
 
+  it('refuses to start a session on an archived deck; unarchive restores it', async () => {
+    const { archiveDeck, unarchiveDeck } = await import('./queries');
+    await archiveDeck(db.conn, 'mini', T0.getTime());
+    await expect(sm.start('mini')).rejects.toThrow(/archived — unarchive it to drill/);
+
+    // Summaries expose the archived state (real fields, not the B6 stubs).
+    let summaries = await deckSummaries(db.conn, nowRef.now);
+    expect(summaries[0].packId).toBe('mini');
+    expect(summaries[0].archivedAtIso).toBe(T0.toISOString());
+
+    await unarchiveDeck(db.conn, 'mini');
+    summaries = await deckSummaries(db.conn, nowRef.now);
+    expect(summaries[0].archivedAtIso).toBeNull();
+    const start = await sm.start('mini');
+    expect(start.queueLength).toBeGreaterThan(0);
+  });
+
   it('rejects answers for the wrong card and for unknown sessions/decks', async () => {
     await expect(sm.start('nope')).rejects.toThrow(/unknown deck/);
     await sm.start('mini');

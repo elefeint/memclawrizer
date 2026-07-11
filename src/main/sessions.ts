@@ -102,6 +102,9 @@ export class SessionManager {
   async start(deckId: string, opts: { tags?: string[] } = {}): Promise<SessionStart> {
     const deck = await getDeck(this.conn, deckId);
     if (deck === null) throw new Error(`unknown deck ${deckId}`);
+    if (deck.archivedAtMs !== null) {
+      throw new Error(`deck "${deck.name}" is archived — unarchive it to drill`);
+    }
     const now = this.now();
     const cards = await listCards(this.conn, deckId, { activeOnly: true });
     const states = await listCardStates(this.conn, deckId);

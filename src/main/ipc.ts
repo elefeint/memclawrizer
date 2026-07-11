@@ -8,7 +8,7 @@ import type { AnswerRequest, AttemptFilter, DeckSettings } from '../shared/api';
 import { IPC } from '../shared/api';
 import type { Db } from './db';
 import { importPack, exportPack } from './packs';
-import { removeDeck, updateDeckSettings } from './queries';
+import { archiveDeck, removeDeck, unarchiveDeck, updateDeckSettings } from './queries';
 import { SessionManager } from './sessions';
 import { attemptRows, cardStats, deckStats, deckSummaries, trophyViews } from './stats';
 
@@ -41,6 +41,12 @@ export function registerIpc(db: Db, sessions: SessionManager): void {
   });
 
   ipcMain.handle(IPC.decksRemove, (_e, deckId: string) => removeDeck(conn, deckId));
+
+  ipcMain.handle(IPC.decksArchive, (_e, deckId: string) =>
+    archiveDeck(conn, deckId, Date.now()),
+  );
+
+  ipcMain.handle(IPC.decksUnarchive, (_e, deckId: string) => unarchiveDeck(conn, deckId));
 
   ipcMain.handle(IPC.decksUpdateSettings, (_e, deckId: string, settings: DeckSettings) =>
     updateDeckSettings(conn, deckId, settings),
