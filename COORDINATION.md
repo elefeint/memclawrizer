@@ -52,7 +52,7 @@ requests go in the section below.
   "too short to catch").
 
 ## New milestones (2026-07-11): timer calibration (DESIGN.md "Timer calibration")
-- [ ] B8 [backend]: schema v4 (sessions.kind TEXT DEFAULT 'drill'); calibration
+- [x] B8 [backend]: schema v4 (sessions.kind TEXT DEFAULT 'drill'); calibration
       ipc (start samples ~10 cards' canonical answers with injected rng;
       submit logs attempts rows outcome='calibration' box_before=box_after,
       session kind='calibration', computes floor/suggestion per DESIGN math,
@@ -237,3 +237,13 @@ requests go in the section below.
   deck-list cross-filter — mock-legacy already proves it) → "no active
   decks" message → unarchive both → status lines correct. 155 tests
   (+2 archiving specs in mock-api.test.ts) + tsc + lint green.
+- 2026-07-11 [backend] B8 done. Schema v4 (sessions.kind, NULL=drill);
+  calibration.ts mirrors the mock math exactly (floor = median of
+  copy-matched trials, (floor+1200)/1.5 to 100ms in [1500,10000], applied
+  only with >=3 correct); trials audit-logged (outcome='calibration',
+  timer_ms=0, box frozen, zero card_state writes); calibratedAtIso = latest
+  APPLIED run (ended_at set only then; aborted/insufficient runs keep
+  ended_at NULL by design); drill medians and trophies proven pollution-free;
+  attempt log filterable by outcome='calibration'. Gates: 171 tests + tsc +
+  lint; packaged app migrated real-profile COPY v3→v4 (330 attempts, 23
+  drill sessions, 4 trophies intact); e2e smoke green.
