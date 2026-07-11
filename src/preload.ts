@@ -15,6 +15,8 @@ const api: Api = {
     remove: (deckId) => ipcRenderer.invoke(IPC.decksRemove, deckId),
     updateSettings: (deckId, settings) =>
       ipcRenderer.invoke(IPC.decksUpdateSettings, deckId, settings),
+    archive: (deckId) => ipcRenderer.invoke(IPC.decksArchive, deckId),
+    unarchive: (deckId) => ipcRenderer.invoke(IPC.decksUnarchive, deckId),
   },
   session: {
     start: (deckId, opts) => ipcRenderer.invoke(IPC.sessionStart, deckId, opts),

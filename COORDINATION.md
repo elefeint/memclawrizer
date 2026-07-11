@@ -51,6 +51,23 @@ requests go in the section below.
   looser tail trim (clips 0.25–0.61 s, median 0.39 s — was 0.14–0.26 s,
   "too short to catch").
 
+## New milestones (2026-07-10): archivable decks (DESIGN.md "Deck lifecycle")
+- [ ] B7 [backend]: schema v3 (decks.pack_id backfilled = id, decks.archived_at
+      NULL); queries expose both + archive/unarchive updates; import matches
+      ACTIVE deck by pack_id, else creates a new deck (internal id minted
+      <pack_id>#2… on collision; most-recently-imported wins if several
+      active share a pack_id); export writes pack_id as the pack's id;
+      session.start on an archived deck rejects; deckSummaries fills real
+      packId/archivedAtIso (replace coordinator stubs in stats.ts); ipc
+      handlers for decks:archive/decks:unarchive; migration + import + e2e
+      gates.
+- [ ] F7 [frontend]: home splits active list from a collapsed "Archived"
+      section (name, card count, archived date, Unarchive button, Stats
+      link); Archive action inside each deck's Settings details (not a
+      bare top-level button — misclick-resistant); archived decks keep
+      trophies on the shelf; mock flows already stubbed by coordinator —
+      flesh out + tests + CDP verification both themes.
+
 ## New milestones (2026-07-08): answer-side audio (pack format v2)
 - [x] B6 [backend]: PACK_FORMAT_VERSION=2 accepting v1+v2; optional card
       `answer_media` (audio, path-validated); DB migration v2 adds

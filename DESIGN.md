@@ -255,6 +255,22 @@ media/
   an "include state" export can be added later if ever needed).
 - `format_version` gates the importer the same way schema_version gates the DB:
   newer app reads old packs; old app refuses new packs.
+- **Deck lifecycle: archiving (2026-07-10).** A deck can be archived
+  (reversible): hidden from the active list into a collapsed "Archived"
+  section, not drillable, excluded from due counts — but nothing is deleted:
+  Leitner state, the full attempt log, and its sealed jars on the trophy
+  shelf all remain (perfection is forever). Archiving requires splitting the
+  internal deck id from the pack's author id (DB schema v3:
+  `decks.pack_id`, `decks.archived_at`; existing rows get `pack_id = id`).
+  **Import never touches archived decks:** it upserts into the active deck
+  with that `pack_id` if one exists; otherwise — including when only an
+  archived deck carries the id — it creates a brand-new deck (internal id
+  minted `<pack_id>#2`, `#3`… on collision) starting from scratch. So an
+  archived deck's history is frozen; re-importing "the same" pack is a fresh
+  start, per Elena. If several active decks ever share a `pack_id`
+  (unarchive after a re-import), import upserts the most recently imported
+  one. Export writes `pack_id` as the pack's id, so round-trips preserve the
+  author-chosen id.
 - **Format v2 (2026-07-08): answer-side audio.** A card may carry
   `"answer_media": "media/shi.ogg"` — an audio file played during the
   feedback/grab phase after the attempt, for BOTH outcomes (hearing the

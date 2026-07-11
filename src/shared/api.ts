@@ -27,7 +27,13 @@ export interface DeckSettings {
 export const DEFAULT_MAX_BOX1_FOR_NEW = 10;
 
 export interface DeckSummary {
+  /** Internal deck id (may differ from the pack's id after re-imports). */
   id: string;
+  /** Author-chosen id from deck.json; import matching key. */
+  packId: string;
+  /** Set when archived: hidden from active list, not drillable; history and
+   *  trophies retained. (Contract change #3, additive, 2026-07-10.) */
+  archivedAtIso: string | null;
   name: string;
   description: string | null;
   cardCount: number;
@@ -182,6 +188,9 @@ export interface Api {
     export(deckId: string): Promise<string | null>;
     remove(deckId: string): Promise<void>;
     updateSettings(deckId: string, settings: DeckSettings): Promise<void>;
+    /** Reversible; archived decks keep all history and trophies. */
+    archive(deckId: string): Promise<void>;
+    unarchive(deckId: string): Promise<void>;
   };
   session: {
     start(deckId: string, opts?: { tags?: string[] }): Promise<SessionStart>;
@@ -203,6 +212,8 @@ export const IPC = {
   decksExport: 'decks:export',
   decksRemove: 'decks:remove',
   decksUpdateSettings: 'decks:update-settings',
+  decksArchive: 'decks:archive',
+  decksUnarchive: 'decks:unarchive',
   sessionStart: 'session:start',
   sessionAnswer: 'session:answer',
   sessionAbort: 'session:abort',

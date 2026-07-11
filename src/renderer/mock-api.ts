@@ -184,6 +184,8 @@ function seedTrophies(): TrophyView[] {
 export function createMockApi(): Api {
   const sessions = new Map<string, MockSession>();
   const trophies: TrophyView[] = seedTrophies();
+  // Archive state (contract #3). In-memory; F7 gives it real UI flows.
+  const archivedAt = new Map<string, string>();
   let sessionCounter = 0;
 
   const toView = (s: MockSession, e: QueueEntry): CardView => ({
@@ -198,6 +200,8 @@ export function createMockApi(): Api {
 
   const summary = (d: MockDeck): DeckSummary => ({
     id: d.id,
+    packId: d.id,
+    archivedAtIso: archivedAt.get(d.id) ?? null,
     name: d.name,
     description: d.description,
     cardCount: d.cards.length,
@@ -220,6 +224,12 @@ export function createMockApi(): Api {
       }),
       export: async () => '/tmp/mock-export.deckpack',
       remove: async () => undefined,
+      archive: async (deckId) => {
+        archivedAt.set(deckId, new Date().toISOString());
+      },
+      unarchive: async (deckId) => {
+        archivedAt.delete(deckId);
+      },
       updateSettings: async (deckId, settings) => {
         const d = DECKS.find((x) => x.id === deckId);
         if (d) d.settings = { ...settings };

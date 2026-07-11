@@ -55,6 +55,9 @@ export async function deckSummaries(conn: DuckDBConnection, now: Date): Promise<
     ).length;
     result.push({
       id: deck.id,
+      // Stubs until B7 lands schema v3 (pack_id, archived_at) — contract #3.
+      packId: deck.id,
+      archivedAtIso: null,
       name: deck.name,
       description: deck.description,
       cardCount: cards.length,
