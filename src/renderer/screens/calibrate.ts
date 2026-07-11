@@ -102,6 +102,7 @@ export async function mountCalibrate(
 
   async function finish(): Promise<void> {
     finished = true;
+    input.value = '';
     input.disabled = true;
     note.hidden = true;
     renderDots();
