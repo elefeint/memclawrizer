@@ -136,6 +136,39 @@ describe('openDatabase', () => {
     }
   });
 
+  it('migrates a schema-v3 file to v4: sessions gain kind, existing rows read as drill', async () => {
+    const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
+    const file = join(dir, 'v3.duckdb');
+    try {
+      const instance = await DuckDBInstance.create(file);
+      const conn = await instance.connect();
+      await MIGRATIONS[0](conn);
+      await MIGRATIONS[1](conn);
+      await MIGRATIONS[2](conn);
+      await conn.run('CREATE TABLE schema_version(version INTEGER NOT NULL)');
+      await conn.run('INSERT INTO schema_version VALUES (3)');
+      await conn.run(
+        `INSERT INTO sessions (id, deck_id, started_at, ended_at, tag_filter, settings, perfect, jar)
+         VALUES ('s1', 'd1', TIMESTAMP '2026-07-10 09:00:00', TIMESTAMP '2026-07-10 09:05:00',
+                 NULL, '{}', true, '["🏆"]')`,
+      );
+      conn.closeSync();
+      instance.closeSync();
+
+      const db = await openDatabase(file);
+      const version = await db.conn.runAndReadAll('SELECT version FROM schema_version');
+      expect(version.getRows()).toEqual([[SCHEMA_VERSION]]);
+      const rows = await db.conn.runAndReadAll(
+        `SELECT id, coalesce(kind, 'drill'), perfect FROM sessions`,
+      );
+      expect(rows.getRows()).toEqual([['s1', 'drill', true]]);
+      db.conn.closeSync();
+      db.instance.closeSync();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it('refuses a file written by a newer schema', async () => {
     const dir = mkdtempSync(join(tmpdir(), 'memclawrizer-test-'));
     const file = join(dir, 'newer.duckdb');

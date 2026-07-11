@@ -19,6 +19,7 @@ export const MIGRATIONS: Array<(conn: DuckDBConnection) => Promise<void>> = [
   migrateV1,
   migrateV2,
   migrateV3,
+  migrateV4,
 ];
 
 export const SCHEMA_VERSION = MIGRATIONS.length;
@@ -56,6 +57,13 @@ async function migrate(conn: DuckDBConnection): Promise<void> {
     await conn.run('ROLLBACK');
     throw e;
   }
+}
+
+/** v4 (2026-07-11): timer calibration — sessions get a kind so calibration
+ * runs live in the same audit trail without being drills (DESIGN.md "Timer
+ * calibration"). NULL reads as 'drill' (pre-v4 rows). */
+async function migrateV4(conn: DuckDBConnection): Promise<void> {
+  await conn.run("ALTER TABLE sessions ADD COLUMN kind TEXT DEFAULT 'drill'");
 }
 
 /** v3 (2026-07-10): archivable decks — internal id splits from the pack's
