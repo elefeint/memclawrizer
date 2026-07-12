@@ -59,6 +59,20 @@ requests go in the section below.
   ("thinking room"); generators author piano 2200 / kana 3500; decks
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
+## New milestones (2026-07-12): once-a-day new cards + settings screen
+- [ ] B9 [backend]: bug fix — session.start introduces new cards only when NO
+      drill session (kind='drill') for this deck started earlier the same
+      LOCAL calendar day (calibration sessions don't count); same-day
+      sessions get newCardsPerSession=0 effectively. Injected-now tests:
+      same-day second session no new; next-day new again; tag-filtered and
+      full-deck sessions share the per-deck day gate.
+- [ ] F9 [frontend]: settings move out of the inline disclosure to a
+      dedicated deck-settings screen (timer, new/session, box-1 gate,
+      thinking room, Save, Recalibrate, Archive) reached via a gear icon at
+      the RIGHT edge of each active deck row; Back button returns to the
+      overview. Mock mirrors the B9 same-day rule (in-memory last-drill-day
+      per deck). Tests + CDP both themes.
+
 ## New milestones (2026-07-11): timer calibration (DESIGN.md "Timer calibration")
 - [x] B8 [backend]: schema v4 (sessions.kind TEXT DEFAULT 'drill'); calibration
       ipc (start samples ~10 cards' canonical answers with injected rng;

@@ -206,6 +206,11 @@ Five boxes. Intervals before a card is due again after a success:
   remaining capacity (still capped by `newCardsPerSession`). Failing a lot
   automatically pauses new material until the struggling set shrinks —
   counted within the tag filter when drilling a subset.
+- **Once-a-day introduction (2026-07-12, bug fix):** new cards are introduced
+  only in the deck's FIRST drill session of a local calendar day. Same-day
+  follow-up sessions drill due/retry cards only — repeat sessions exist to
+  clear the struggling set, not to expand it. (Calibration sessions don't
+  count as the day's first drill.)
 - **Only the first attempt on a card within a session moves its box** (re-queued
   retries are practice and are logged, but don't count for scheduling — otherwise
   every session would end with everything "promoted").
@@ -432,9 +437,14 @@ bookkeeping, works for images and audio alike.
 ## UI (three screens, no framework — DOM + TS like ayamt)
 
 1. **Home / deck list** — each deck: name, cards due now, new cards remaining,
-   box-distribution mini-bar, [Drill] [Drill by tag…] [Export]. Global [Import].
+   box-distribution mini-bar, [Drill] [Drill by tag…] [Export], and a **gear
+   icon at the right edge of the row** opening the deck's settings screen
+   (2026-07-12: settings moved out of the inline disclosure). Global [Import].
    Below the decks: the **trophy shelf** — sealed jars from perfect sessions,
    newest first, hover for label (deck, date, size).
+1b. **Deck settings screen** (behind the gear): timer, new cards/session,
+   box-1 gate, thinking room, Save, Recalibrate, Archive — plus a **Back**
+   button returning to the overview.
 2. **Drill** — the game. Claw sprite travelling its rail, prize pit below, the
    session jar upper right, prompt, input, remaining count, failure feedback
    (answer + mnemonic). Esc aborts (the jar empties back into the pit). The prize pit draws from a
