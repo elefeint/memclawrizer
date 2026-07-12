@@ -58,9 +58,28 @@ test('packaged app: drill with a wrong answer, re-queue, jar, and persisted atte
     await expect(deckRow).toContainText('0 due · 4 new · 4 cards');
     await expect(page.getByTestId('trophy-shelf')).toContainText('perfect sessions live here');
 
-    // ---- drill ----
+    // ---- calibration warm-up (F8: first drill of an uncalibrated deck) ----
+    // Complete it for real: copy-type every shown answer until the result
+    // beat, so calibration → applied timer → drill hand-off is smoke-covered.
     await page.getByRole('button', { name: 'Drill', exact: true }).click();
-    await expect(page.getByTestId('drill-screen')).toBeVisible();
+    await expect(page.locator('.calibrate')).toBeVisible();
+    const calInput = page.locator('.calibrate-input');
+    // The input is disabled between trials and after the last one, so poll:
+    // type when ready, wait when not, stop at the result beat.
+    for (let i = 0; i < 100; i++) {
+      if (await page.locator('.calibrate-result').isVisible()) break;
+      if (await calInput.isEnabled()) {
+        const shown = (await page.locator('.calibrate-text').textContent()) ?? '';
+        await calInput.fill(shown.trim());
+        await calInput.press('Enter');
+      } else {
+        await page.waitForTimeout(100);
+      }
+    }
+    await expect(page.locator('.calibrate-result')).toContainText('your floor');
+
+    // ---- drill (auto-continues after the result beat) ----
+    await expect(page.getByTestId('drill-screen')).toBeVisible({ timeout: 15000 });
     await expect(page.getByTestId('jar').getByTestId('jar-slot')).toHaveCount(4);
 
     const input = page.getByTestId('answer-input');
@@ -139,23 +158,42 @@ test('packaged app: drill with a wrong answer, re-queue, jar, and persisted atte
          FROM attempts ORDER BY id`,
       )
     ).getRows();
-    expect(attempts).toHaveLength(5);
-    expect(attempts.filter((r) => r[0] === 'correct')).toHaveLength(4);
-    expect(attempts.filter((r) => r[0] === 'wrong')).toHaveLength(1);
-    expect(attempts.filter((r) => r[1] === true)).toHaveLength(4); // first attempts
-    const retryRow = attempts.find((r) => r[1] === false);
+    // 4 calibration copy-trials (min(10, deck size)) + 5 drill attempts.
+    const calRows = attempts.filter((r) => r[0] === 'calibration');
+    expect(calRows).toHaveLength(4);
+    for (const r of calRows) {
+      expect(r[1]).toBe(false); // never a first attempt
+      expect(r[2]).toBe(r[3]); // never moves a box
+    }
+    const drill = attempts.filter((r) => r[0] !== 'calibration');
+    expect(drill).toHaveLength(5);
+    expect(drill.filter((r) => r[0] === 'correct')).toHaveLength(4);
+    expect(drill.filter((r) => r[0] === 'wrong')).toHaveLength(1);
+    expect(drill.filter((r) => r[1] === true)).toHaveLength(4); // first attempts
+    const retryRow = drill.find((r) => r[1] === false);
     expect(retryRow?.[0]).toBe('correct'); // the cleared retry
     expect(retryRow?.[2]).toBe(retryRow?.[3]); // ...moved no box
 
     const sessions = (
       await conn.runAndReadAll(
-        'SELECT perfect, ended_at IS NOT NULL, jar FROM sessions',
+        `SELECT coalesce(kind, 'drill'), perfect, ended_at IS NOT NULL, jar
+         FROM sessions ORDER BY started_at`,
       )
     ).getRows();
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0][0]).toBe(false); // imperfect
-    expect(sessions[0][1]).toBe(true); // ended_at set
-    expect(sessions[0][2]).toBeNull(); // jar kept only for perfect sessions
+    expect(sessions).toHaveLength(2);
+    const calSession = sessions.find((r) => r[0] === 'calibration');
+    expect(calSession?.[2]).toBe(true); // applied calibration → ended_at set
+    const drillSession = sessions.find((r) => r[0] === 'drill');
+    expect(drillSession?.[1]).toBe(false); // imperfect
+    expect(drillSession?.[2]).toBe(true); // ended_at set
+    expect(drillSession?.[3]).toBeNull(); // jar kept only for perfect sessions
+
+    // The calibration actually tightened the deck's timer (playwright types
+    // fast → floor is tiny → suggestion clamps to the 1500ms minimum).
+    const settings = (
+      await conn.runAndReadAll(`SELECT settings FROM decks`)
+    ).getRows();
+    expect(JSON.parse(String(settings[0][0])).baseTimerMs).toBe(1500);
   } finally {
     conn.closeSync();
     instance.closeSync();
