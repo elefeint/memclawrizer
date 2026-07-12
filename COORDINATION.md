@@ -60,7 +60,7 @@ requests go in the section below.
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
 ## New milestones (2026-07-12): once-a-day new cards + settings screen
-- [ ] B9 [backend]: bug fix — session.start introduces new cards only when NO
+- [x] B9 [backend]: bug fix — session.start introduces new cards only when NO
       drill session (kind='drill') for this deck started earlier the same
       LOCAL calendar day (calibration sessions don't count); same-day
       sessions get newCardsPerSession=0 effectively. Injected-now tests:
@@ -293,3 +293,14 @@ requests go in the section below.
   .recalibrate-button. Integration note: renderer expects backend
   calibration.start to sample ANSWER texts and submit to apply settings +
   stamp calibratedAt exactly like the mock. 167 tests + tsc + lint green.
+- 2026-07-12 [backend] B9 done. session.start checks for an earlier
+  kind='drill' session for the deck since LOCAL midnight (injected now,
+  setHours(0,0,0,0); check runs before this session's own insert;
+  calibration doesn't count) and if found builds the queue with an
+  effective newCardsPerSession=0 — stored settings and leitner.ts
+  untouched. queries.hasDrillSessionSince helper. 5 injected-now tests:
+  same-day gating (incl. late evening), next-local-day reset, calibration
+  exempt, tag/full sessions share the per-deck gate, summaries unaffected.
+  184 tests + tsc + lint green; e2e smoke green against a fresh package.
+  Note: an empty first session (nothing due, nothing new) also consumes the
+  day — consistent with "repeat sessions don't expand", flag if unwanted.

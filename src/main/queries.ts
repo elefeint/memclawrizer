@@ -489,6 +489,23 @@ export async function latestCalibrationEndMs(
   return v === null ? null : timestampToMs(v);
 }
 
+/**
+ * True when a drill session for the deck started at/after sinceMs.
+ * Calibration sessions don't count; pre-v4 NULL kind means drill.
+ */
+export async function hasDrillSessionSince(
+  conn: DuckDBConnection,
+  deckId: string,
+  sinceMs: number,
+): Promise<boolean> {
+  const reader = await conn.runAndReadAll(
+    `SELECT count(*) FROM sessions
+     WHERE deck_id = $1 AND coalesce(kind, 'drill') = 'drill' AND started_at >= $2`,
+    [deckId, msToTimestamp(sinceMs)],
+  );
+  return Number(reader.getRows()[0][0]) > 0;
+}
+
 /** jar is persisted only for perfect sessions (DESIGN.md schema comment). */
 export async function endSession(
   conn: DuckDBConnection,

@@ -332,6 +332,104 @@ describe('SessionManager', () => {
   });
 });
 
+describe('once-a-day new-card introduction (B9)', () => {
+  // Local-component dates: the gate works on LOCAL calendar days, so tests
+  // must be timezone-independent.
+  const DAY1_9AM = new Date(2026, 6, 11, 9, 0, 0);
+  const DAY1_11AM = new Date(2026, 6, 11, 11, 0, 0);
+  const DAY1_LATE = new Date(2026, 6, 11, 23, 30, 0);
+  const DAY2_9AM = new Date(2026, 6, 12, 9, 0, 0);
+
+  let db: Db;
+  let nowRef: { now: Date };
+  let sm: SessionManager;
+
+  beforeEach(async () => {
+    db = await openDatabase(':memory:');
+    await importPack(db.conn, MINI, DAY1_9AM);
+    nowRef = { now: DAY1_9AM };
+    sm = manager(db, nowRef);
+  });
+
+  it('same-day second session introduces no new cards but still drills due ones', async () => {
+    // First drill of the day: all 4 (new) cards introduced.
+    const first = await sm.start('mini');
+    expect(first.queueLength).toBe(4);
+    // Fail one first attempt (→ box 1, due now), then quit.
+    await sm.answer('session-1', {
+      cardId: first.first?.cardId ?? '', response: 'zzz', elapsedMs: 500, timedOut: false, prize: null,
+    });
+    await sm.abort('session-1');
+
+    // Two hours later, same local day: only the failed card comes back;
+    // the three untouched (still-new) cards are NOT introduced again.
+    nowRef.now = DAY1_11AM;
+    const second = await sm.start('mini');
+    expect(second.queueLength).toBe(1);
+    expect(second.first?.cardId).toBe(first.first?.cardId);
+
+    // Even late the same evening: still gated.
+    await sm.abort('session-2');
+    nowRef.now = DAY1_LATE;
+    const third = await sm.start('mini');
+    expect(third.queueLength).toBe(1);
+  });
+
+  it('the next local day introduces new cards again', async () => {
+    const first = await sm.start('mini');
+    await sm.answer('session-1', {
+      cardId: first.first?.cardId ?? '', response: 'zzz', elapsedMs: 500, timedOut: false, prize: null,
+    });
+    await sm.abort('session-1');
+
+    nowRef.now = DAY2_9AM;
+    const nextDay = await sm.start('mini');
+    // 1 due (failed yesterday, box 1) + 3 still-new introduced.
+    expect(nextDay.queueLength).toBe(4);
+  });
+
+  it('a calibration session earlier in the day does not consume the introduction', async () => {
+    const { CalibrationManager } = await import('./calibration');
+    const cal = new CalibrationManager(db.conn, {
+      now: () => DAY1_9AM,
+      rng: noShuffle,
+      uuid: () => 'cal-1',
+    });
+    const c = await cal.start('mini');
+    await cal.submit(c.sessionId, c.trials.map((t) => ({
+      cardId: t.cardId, text: t.text, response: t.text, elapsedMs: 1000,
+    })));
+
+    nowRef.now = DAY1_11AM;
+    const first = await sm.start('mini');
+    expect(first.queueLength).toBe(4); // still the day's first DRILL
+  });
+
+  it('tag-filtered and full-deck sessions share the per-deck day gate', async () => {
+    // Tag-filtered drill first: introduces (and consumes the day for) the deck.
+    const tagged = await sm.start('mini', { tags: ['s-row'] });
+    expect(tagged.queueLength).toBe(1);
+    await sm.abort('session-1');
+
+    // Full-deck session the same day: nothing due, nothing introduced.
+    nowRef.now = DAY1_11AM;
+    const full = await sm.start('mini');
+    expect(full.queueLength).toBe(0);
+    expect(full.first).toBeNull();
+  });
+
+  it('deckSummaries dueCount/newCount are unaffected by the day gate', async () => {
+    await sm.start('mini');
+    await sm.abort('session-1');
+    nowRef.now = DAY1_11AM;
+    const summaries = await deckSummaries(db.conn, nowRef.now);
+    // All 4 cards untouched by the aborted session: still new, none due.
+    expect(summaries[0].newCount).toBe(4);
+    expect(summaries[0].dueCount).toBe(0);
+    expect(summaries[0].cardCount).toBe(4);
+  });
+});
+
 describe('mediaUrlFor', () => {
   it('percent-encodes per segment, keeping the path structure', () => {
     expect(mediaUrlFor('mini/media/dot.svg')).toBe('mem://media/mini/media/dot.svg');

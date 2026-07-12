@@ -29,6 +29,7 @@ import type { CardRow, CardStateRow } from './queries';
 import {
   endSession,
   getDeck,
+  hasDrillSessionSince,
   insertAttempt,
   insertSession,
   listCards,
@@ -110,7 +111,20 @@ export class SessionManager {
     const states = await listCardStates(this.conn, deckId);
     const tagFilter = opts.tags ?? null;
 
-    const queueCards = buildSessionQueue(states, cards, deck.settings, tagFilter, now, this.rng);
+    // Once-a-day introduction (DESIGN.md, 2026-07-12): new cards enter only
+    // in the deck's FIRST drill of the local calendar day — repeat sessions
+    // clear the struggling set, they don't expand it. Checked before this
+    // session's own row is inserted; calibration sessions don't count. The
+    // gate is per-deck: a tag-filtered drill consumes the day's introduction
+    // for the whole deck too.
+    const localMidnight = new Date(now);
+    localMidnight.setHours(0, 0, 0, 0);
+    const drilledToday = await hasDrillSessionSince(this.conn, deckId, localMidnight.getTime());
+    const effectiveSettings = drilledToday
+      ? { ...deck.settings, newCardsPerSession: 0 }
+      : deck.settings;
+
+    const queueCards = buildSessionQueue(states, cards, effectiveSettings, tagFilter, now, this.rng);
 
     const id = this.uuid();
     await insertSession(this.conn, {
