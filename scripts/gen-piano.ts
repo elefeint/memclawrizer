@@ -141,7 +141,7 @@ function pianoDeck(clef: Clef): GeneratedPack {
       `${range.from.letter.toUpperCase()}${range.from.octave}–` +
       `${range.to.letter.toUpperCase()}${range.to.octave}. ` +
       'Answer with the note name; the octave number is optional.',
-    settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+    settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
     cards,
   });
   files.set('deck.json', new TextEncoder().encode(deckJson));

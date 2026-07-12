@@ -17,7 +17,7 @@ import path from 'node:path';
 import { unzipSync, zipSync, type Zippable } from 'fflate';
 import type { DuckDBConnection } from '@duckdb/node-api';
 import type { DeckSettings, ImportResult, PromptType } from '../shared/api';
-import { DEFAULT_MAX_BOX1_FOR_NEW } from '../shared/api';
+import { DEFAULT_MAX_BOX1_FOR_NEW, DEFAULT_RETRIEVAL_ALLOWANCE_MS } from '../shared/api';
 import { normalizeAnswer } from '../shared/normalize';
 import {
   deleteUnreferencedMedia,
@@ -190,6 +190,11 @@ export function parsePackJson(text: string): ParsedPack {
       s.max_box1_for_new === undefined
         ? DEFAULT_MAX_BOX1_FOR_NEW
         : reqPositiveInt(s.max_box1_for_new, 'settings.max_box1_for_new'),
+    // Optional (added 2026-07-12); thinking-room above the calibrated floor.
+    retrievalAllowanceMs:
+      s.retrieval_allowance_ms === undefined
+        ? DEFAULT_RETRIEVAL_ALLOWANCE_MS
+        : reqPositiveInt(s.retrieval_allowance_ms, 'settings.retrieval_allowance_ms'),
   };
 
   if (!Array.isArray(d.cards)) fail('cards', 'must be an array');
@@ -427,6 +432,7 @@ export function buildDeckJson(deck: {
         base_timer_ms: deck.settings.baseTimerMs,
         new_cards_per_session: deck.settings.newCardsPerSession,
         max_box1_for_new: deck.settings.maxBox1ForNew,
+        retrieval_allowance_ms: deck.settings.retrievalAllowanceMs,
       },
       cards: deck.cards,
     },

@@ -13,7 +13,7 @@ export const GRAB_MS = 1100;
 /** Claw grabs but the prize slips back into the pit (retry success). */
 export const SLIP_MS = 1100;
 /** Failure feedback: expected answers + mnemonic stay up this long. */
-export const FEEDBACK_MS = 2800;
+export const FEEDBACK_MS = 3300; // +500ms 2026-07-12: Elena wants the answer readable longer
 /** Pebble drop into the jar slot (runs inside the feedback window). */
 export const PEBBLE_MS = 420;
 /** Lid screws onto a perfect jar (+ label fade-in). */

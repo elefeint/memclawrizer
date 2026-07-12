@@ -33,7 +33,7 @@ const deck = (over: Partial<DeckRow> = {}): DeckRow => ({
   packId: 'd1',
   name: 'Deck one',
   description: 'desc',
-  settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+  settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
   formatVersion: 1,
   importedAtMs: T0,
   archivedAtMs: null,
@@ -77,11 +77,12 @@ describe('queries', () => {
 
   it('updates deck settings in place', async () => {
     await upsertDeck(db.conn, deck());
-    await updateDeckSettings(db.conn, 'd1', { baseTimerMs: 1234, newCardsPerSession: 2, maxBox1ForNew: 10 });
+    await updateDeckSettings(db.conn, 'd1', { baseTimerMs: 1234, newCardsPerSession: 2, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 });
     expect((await getDeck(db.conn, 'd1'))?.settings).toEqual({
       baseTimerMs: 1234,
       newCardsPerSession: 2,
       maxBox1ForNew: 10,
+      retrievalAllowanceMs: 2200,
     });
   });
 
@@ -165,14 +166,14 @@ describe('queries', () => {
       deckId: 'd1',
       startedAtMs: T0,
       tagFilter: ['hiragana'],
-      settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+      settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
     });
     await insertSession(db.conn, {
       id: 's-imperfect',
       deckId: 'd1',
       startedAtMs: T0 + 1000,
       tagFilter: null,
-      settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+      settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
     });
     await endSession(db.conn, 's-perfect', T0 + 60_000, true, ['🦆', '🎲']);
     await endSession(db.conn, 's-imperfect', T0 + 120_000, false, ['🦆', null]);

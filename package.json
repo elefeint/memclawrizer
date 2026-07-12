@@ -1,7 +1,7 @@
 {
   "name": "memclawrizer",
   "productName": "memclawrizer",
-  "version": "0.0.7",
+  "version": "0.0.8",
   "description": "Time-pressured drill trainer: an arcade claw, a Leitner scheduler, and a jar you only get to keep if you're perfect",
   "main": ".vite/build/main.js",
   "private": true,

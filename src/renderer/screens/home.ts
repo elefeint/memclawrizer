@@ -216,15 +216,34 @@ export async function mountHome(
         'Below that, new cards fill only the remaining capacity.';
       gateLabel.appendChild(gate);
 
+      const allowanceLabel = el('label');
+      allowanceLabel.append(document.createTextNode('thinking room (ms) '));
+      const allowance = el('input');
+      allowance.type = 'number';
+      allowance.min = '500';
+      allowance.step = '100';
+      allowance.value = String(deck.settings.retrievalAllowanceMs);
+      allowanceLabel.title =
+        'Added to your measured typing floor to form the box-1 window. ' +
+        'Tight for calculable material (music notes) so only recall fits; ' +
+        'looser where there is nothing to calculate (kana). ' +
+        'Takes effect on the next (re)calibration.';
+      allowanceLabel.appendChild(allowance);
+
       form.append(
         timerLabel,
         newLabel,
         gateLabel,
+        allowanceLabel,
         button('Save', () => {
           const settings = {
             baseTimerMs: Math.max(1000, Number(timer.value) || deck.settings.baseTimerMs),
             newCardsPerSession: Math.max(0, Number(newCards.value) || 0),
             maxBox1ForNew: Math.max(1, Number(gate.value) || deck.settings.maxBox1ForNew),
+            retrievalAllowanceMs: Math.max(
+              500,
+              Number(allowance.value) || deck.settings.retrievalAllowanceMs,
+            ),
           };
           void api.decks.updateSettings(deck.id, settings).then(() => {
             say(`saved settings for “${deck.name}”`);

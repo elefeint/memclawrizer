@@ -33,8 +33,6 @@ import type { SessionDeps } from './sessions';
 
 /** Trials per run; smaller decks use every card. */
 export const CALIBRATION_TRIALS = 10;
-/** Retrieval allowance added to the floor: remember, don't compute. */
-export const RETRIEVAL_ALLOWANCE_MS = 1200;
 /** Box-1 timer multiplier the window is divided by. */
 const BOX1_MULTIPLIER = 1.5;
 /** Fewer correct trials than this → suggestion not applied. */
@@ -55,11 +53,15 @@ function medianOf(sortedMs: number[]): number {
     : Math.round((sortedMs[n / 2 - 1] + sortedMs[n / 2]) / 2);
 }
 
-/** floor + allowance, ÷ box-1 multiplier, to 100 ms, clamped [1500, 10000]. */
-export function suggestBaseTimerMs(floorMs: number): number {
+/**
+ * floor + the deck's retrieval allowance (contract #5: a per-deck domain
+ * fact — tight for calculable material), ÷ box-1 multiplier, to 100 ms,
+ * clamped [1500, 10000].
+ */
+export function suggestBaseTimerMs(floorMs: number, allowanceMs: number): number {
   return Math.min(
     10_000,
-    Math.max(1500, Math.round((floorMs + RETRIEVAL_ALLOWANCE_MS) / BOX1_MULTIPLIER / 100) * 100),
+    Math.max(1500, Math.round((floorMs + allowanceMs) / BOX1_MULTIPLIER / 100) * 100),
   );
 }
 
@@ -148,11 +150,13 @@ export class CalibrationManager {
       .sort((a, b) => a - b);
     const floorMs = ok.length === 0 ? 0 : medianOf(ok);
     const appliedToSettings = ok.length >= MIN_CORRECT_TRIALS;
-    const suggestedBaseTimerMs = suggestBaseTimerMs(floorMs);
+    // Re-read: settings (incl. the allowance) may have been hand-edited
+    // since start; fall back to the frozen ones if the deck vanished.
+    const deck = await getDeck(this.conn, cal.deckId);
+    const allowanceMs = (deck ?? { settings: cal.settings }).settings.retrievalAllowanceMs;
+    const suggestedBaseTimerMs = suggestBaseTimerMs(floorMs, allowanceMs);
 
     if (appliedToSettings) {
-      // Re-read: settings may have been hand-edited since start.
-      const deck = await getDeck(this.conn, cal.deckId);
       if (deck !== null) {
         await updateDeckSettings(this.conn, cal.deckId, {
           ...deck.settings,

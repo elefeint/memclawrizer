@@ -189,11 +189,14 @@ test('packaged app: drill with a wrong answer, re-queue, jar, and persisted atte
     expect(drillSession?.[3]).toBeNull(); // jar kept only for perfect sessions
 
     // The calibration actually tightened the deck's timer (playwright types
-    // fast → floor is tiny → suggestion clamps to the 1500ms minimum).
+    // fast → floor is tiny → suggestion sits at/near the 1500ms clamp; exact
+    // value depends on machine speed, so assert the band, not the number).
     const settings = (
       await conn.runAndReadAll(`SELECT settings FROM decks`)
     ).getRows();
-    expect(JSON.parse(String(settings[0][0])).baseTimerMs).toBe(1500);
+    const calibrated = JSON.parse(String(settings[0][0])).baseTimerMs;
+    expect(calibrated).toBeGreaterThanOrEqual(1500);
+    expect(calibrated).toBeLessThanOrEqual(2000);
   } finally {
     conn.closeSync();
     instance.closeSync();

@@ -149,16 +149,17 @@ describe('mock api timer calibration (contract change #4, F8)', () => {
       trial(trials[0].cardId, trials[0].text, trials[0].text, 1400), // the repeat
     ]);
     expect(r.floorMs).toBe(1400);
-    // (1400 + 1200) / 1.5 = 1733 → rounded to 1700, within [1500, 10000].
-    expect(r.suggestedBaseTimerMs).toBe(1700);
+    // (1400 + 3500 allowance) / 1.5 = 3266.7 → rounded to 3300 (contract #5:
+    // mock-kana authors a 3500ms allowance — nothing to calculate in kana).
+    expect(r.suggestedBaseTimerMs).toBe(3300);
     expect(r.appliedToSettings).toBe(true);
 
     // The deck is stamped and the NEXT drill reads the new timer.
     const deck = (await api.decks.list()).find((d) => d.id === 'mock-kana');
     expect(deck?.calibratedAtIso).toMatch(/^\d{4}-\d{2}-\d{2}T/);
-    expect(deck?.settings.baseTimerMs).toBe(1700);
+    expect(deck?.settings.baseTimerMs).toBe(3300);
     const start = await api.session.start('mock-kana');
-    expect(start.first?.timerMs).toBe(1700);
+    expect(start.first?.timerMs).toBe(3300);
   });
 
   it('too few clean trials: suggestion NOT applied, deck stays uncalibrated', async () => {

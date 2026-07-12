@@ -249,7 +249,7 @@ describe('SessionManager', () => {
     );
     const [tagFilter, settings] = reader.getRows()[0];
     expect(JSON.parse(String(tagFilter))).toEqual(['s-row']);
-    expect(JSON.parse(String(settings))).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 });
+    expect(JSON.parse(String(settings))).toEqual({ baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 });
   });
 
   it('abort ends the session as imperfect and further answers throw', async () => {

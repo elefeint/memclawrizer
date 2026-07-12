@@ -30,7 +30,7 @@ function seededRng(seed: number): () => number {
   };
 }
 
-const settings: DeckSettings = { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 99 };
+const settings: DeckSettings = { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 99, retrievalAllowanceMs: 2200 };
 
 const card = (id: string, over: Partial<CardRow> = {}): CardRow => ({
   deckId: 'd1',
@@ -205,7 +205,7 @@ describe('buildSessionQueue', () => {
     const q = buildSessionQueue(
       [],
       cards,
-      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99 },
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99, retrievalAllowanceMs: 2200 },
       null,
       NOW,
       noShuffle,
@@ -233,7 +233,7 @@ describe('buildSessionQueue', () => {
     const q = buildSessionQueue(
       [],
       cards,
-      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99 },
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 99, retrievalAllowanceMs: 2200 },
       ['katakana'],
       NOW,
       noShuffle,
@@ -279,7 +279,7 @@ describe('buildSessionQueue', () => {
   it('mixes due and new cards into one shuffled queue', () => {
     const cards = [card('new1'), card('due1'), card('new2')];
     const states = [state('due1', { box: 2, dueAtMs: NOW_MS - 1 })];
-    const q = buildSessionQueue(states, cards, { ...settings, newCardsPerSession: 5, maxBox1ForNew: 99 }, null, NOW, seededRng(1));
+    const q = buildSessionQueue(states, cards, { ...settings, newCardsPerSession: 5, maxBox1ForNew: 99, retrievalAllowanceMs: 2200 }, null, NOW, seededRng(1));
     expect(q.map((x) => x.card.id).sort()).toEqual(['due1', 'new1', 'new2']);
     const due1 = q.find((x) => x.card.id === 'due1');
     expect(due1?.box).toBe(2);
@@ -306,7 +306,7 @@ describe('new-card gate (maxBox1ForNew)', () => {
     const q = buildSessionQueue(
       states,
       cards,
-      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3 },
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3, retrievalAllowanceMs: 2200 },
       null,
       NOW,
       noShuffle,
@@ -322,7 +322,7 @@ describe('new-card gate (maxBox1ForNew)', () => {
     let q = buildSessionQueue(
       states,
       cards,
-      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 5 },
+      { ...settings, newCardsPerSession: 2, maxBox1ForNew: 5, retrievalAllowanceMs: 2200 },
       null,
       NOW,
       noShuffle,
@@ -332,7 +332,7 @@ describe('new-card gate (maxBox1ForNew)', () => {
     q = buildSessionQueue(
       states,
       cards,
-      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3 },
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 3, retrievalAllowanceMs: 2200 },
       null,
       NOW,
       noShuffle,
@@ -349,7 +349,7 @@ describe('new-card gate (maxBox1ForNew)', () => {
     const q = buildSessionQueue(
       states,
       cards,
-      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2 },
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2, retrievalAllowanceMs: 2200 },
       null,
       NOW,
       noShuffle,
@@ -368,7 +368,7 @@ describe('new-card gate (maxBox1ForNew)', () => {
     const q = buildSessionQueue(
       states,
       cards,
-      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2 },
+      { ...settings, newCardsPerSession: 5, maxBox1ForNew: 2, retrievalAllowanceMs: 2200 },
       ['katakana'],
       NOW,
       noShuffle,

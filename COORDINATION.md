@@ -51,6 +51,14 @@ requests go in the section below.
   looser tail trim (clips 0.25–0.61 s, median 0.39 s — was 0.14–0.26 s,
   "too short to catch").
 
+- 2026-07-12 [coordinator] Change #5 APPLIED (coordinator-built, no agent):
+  `DeckSettings` gains required `retrievalAllowanceMs` (default 2200 via
+  DEFAULT_RETRIEVAL_ALLOWANCE_MS — the old hardcoded 1200 + Elena's extra
+  second). Calibration math now uses the deck's allowance (main + mock);
+  pack setting `retrieval_allowance_ms` optional; Settings UI 4th field
+  ("thinking room"); generators author piano 2200 / kana 3500; decks
+  regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
+
 ## New milestones (2026-07-11): timer calibration (DESIGN.md "Timer calibration")
 - [x] B8 [backend]: schema v4 (sessions.kind TEXT DEFAULT 'drill'); calibration
       ipc (start samples ~10 cards' canonical answers with injected rng;

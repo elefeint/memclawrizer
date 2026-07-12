@@ -26,13 +26,16 @@ const trial = (
 ): CalibrationTrialResult => ({ cardId, text, response, elapsedMs });
 
 describe('suggestBaseTimerMs', () => {
-  it('mirrors the mock: (floor + 1200) / 1.5, to 100 ms, clamped [1500, 10000]', () => {
-    expect(suggestBaseTimerMs(1400)).toBe(1700); // (1400+1200)/1.5 = 1733 → 1700
-    expect(suggestBaseTimerMs(1450)).toBe(1800); // 1766.7 → 1800
-    expect(suggestBaseTimerMs(0)).toBe(1500); // 800 → clamp up
-    expect(suggestBaseTimerMs(100)).toBe(1500); // 866.7 → 900 → clamp up
-    expect(suggestBaseTimerMs(60000)).toBe(10000); // clamp down
-    expect(suggestBaseTimerMs(3000)).toBe(2800); // 2800 exactly
+  it('mirrors the mock: (floor + allowance) / 1.5, to 100 ms, clamped [1500, 10000]', () => {
+    expect(suggestBaseTimerMs(1400, 1200)).toBe(1700); // (1400+1200)/1.5 = 1733 → 1700
+    expect(suggestBaseTimerMs(1450, 1200)).toBe(1800); // 1766.7 → 1800
+    expect(suggestBaseTimerMs(0, 1200)).toBe(1500); // 800 → clamp up
+    expect(suggestBaseTimerMs(100, 1200)).toBe(1500); // 866.7 → 900 → clamp up
+    expect(suggestBaseTimerMs(60000, 1200)).toBe(10000); // clamp down
+    expect(suggestBaseTimerMs(3000, 1200)).toBe(2800); // 2800 exactly
+    // Contract #5: the allowance is per-deck — same floor, different windows.
+    expect(suggestBaseTimerMs(1400, 2200)).toBe(2400); // (1400+2200)/1.5 = 2400
+    expect(suggestBaseTimerMs(1400, 3500)).toBe(3300); // (1400+3500)/1.5 = 3266.7 → 3300
   });
 });
 
@@ -79,10 +82,11 @@ describe('CalibrationManager', () => {
       trial('n', 'n', 1100),
       trial('shi', 'shi', 5000, 'sji'), // mistyped: logged, excluded from floor
     ]);
-    // floor = median(1100, 1300, 1500) = 1300 → (1300+1200)/1.5 = 1666.7 → 1700
-    expect(result).toEqual({ floorMs: 1300, suggestedBaseTimerMs: 1700, appliedToSettings: true });
+    // floor = median(1100, 1300, 1500) = 1300; mini has no authored allowance
+    // → default 2200 → (1300+2200)/1.5 = 2333.3 → 2300.
+    expect(result).toEqual({ floorMs: 1300, suggestedBaseTimerMs: 2300, appliedToSettings: true });
 
-    expect((await getDeck(db.conn, 'mini'))?.settings.baseTimerMs).toBe(1700);
+    expect((await getDeck(db.conn, 'mini'))?.settings.baseTimerMs).toBe(2300);
     const after = await deckSummaries(db.conn, T0);
     expect(after[0].calibratedAtIso).toBe(T0.toISOString());
   });
@@ -99,7 +103,7 @@ describe('CalibrationManager', () => {
     // floor over the 2 correct = median(1000, 1200) = 1100 (even-length mean).
     expect(result).toEqual({
       floorMs: 1100,
-      suggestedBaseTimerMs: suggestBaseTimerMs(1100),
+      suggestedBaseTimerMs: suggestBaseTimerMs(1100, 2200),
       appliedToSettings: false,
     });
     expect((await getDeck(db.conn, 'mini'))?.settings.baseTimerMs).toBe(baseBefore);
@@ -201,7 +205,8 @@ describe('CalibrationManager', () => {
     await cal2.submit(s2.sessionId, [
       trial('dot', 'dot', 3000), trial('ka', 'ka', 3000), trial('n', 'n', 3000),
     ]);
-    expect((await getDeck(db.conn, 'mini'))?.settings.baseTimerMs).toBe(2800);
+    // floor 3000 + default 2200 allowance → 5200/1.5 = 3466.7 → 3500
+    expect((await getDeck(db.conn, 'mini'))?.settings.baseTimerMs).toBe(3500);
     expect((await deckSummaries(db.conn, T0))[0].calibratedAtIso).toBe(later.toISOString());
   });
 

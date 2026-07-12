@@ -26,10 +26,21 @@ export interface DeckSettings {
    * coordinator-approved 2026-07-10.)
    */
   maxBox1ForNew: number;
+  /**
+   * Thinking-room above the calibrated motor floor: box-1 window =
+   * floor + retrievalAllowanceMs. A DOMAIN fact, authored per deck: tight
+   * for calculable material (music notes — deny the algorithm), looser
+   * where there is nothing to calculate (kana). (Contract change #5,
+   * additive, 2026-07-12.)
+   */
+  retrievalAllowanceMs: number;
 }
 
 /** Default box-1 capacity gate for decks/packs that don't specify one. */
 export const DEFAULT_MAX_BOX1_FOR_NEW = 10;
+
+/** Default retrieval allowance for decks/packs that don't specify one. */
+export const DEFAULT_RETRIEVAL_ALLOWANCE_MS = 2200;
 
 export interface DeckSummary {
   /** Internal deck id (may differ from the pack's id after re-imports). */

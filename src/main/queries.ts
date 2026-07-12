@@ -18,7 +18,7 @@ import {
   timestampValue,
 } from '@duckdb/node-api';
 import type { DeckSettings, Outcome } from '../shared/api';
-import { DEFAULT_MAX_BOX1_FOR_NEW } from '../shared/api';
+import { DEFAULT_MAX_BOX1_FOR_NEW, DEFAULT_RETRIEVAL_ALLOWANCE_MS } from '../shared/api';
 
 // ---------------------------------------------------------------------------
 // Value conversion
@@ -183,7 +183,11 @@ function deckFromRow(r: DuckDBValue[]): DeckRow {
 }
 
 function withSettingsDefaults(stored: DeckSettings): DeckSettings {
-  return { ...stored, maxBox1ForNew: stored.maxBox1ForNew ?? DEFAULT_MAX_BOX1_FOR_NEW };
+  return {
+    ...stored,
+    maxBox1ForNew: stored.maxBox1ForNew ?? DEFAULT_MAX_BOX1_FOR_NEW,
+    retrievalAllowanceMs: stored.retrievalAllowanceMs ?? DEFAULT_RETRIEVAL_ALLOWANCE_MS,
+  };
 }
 
 const DECK_COLS =

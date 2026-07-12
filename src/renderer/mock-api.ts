@@ -110,7 +110,7 @@ const DECKS: MockDeck[] = [
     id: 'mock-kana',
     name: 'Mock kana (4 cards)',
     description: 'Text prompts; includes an unguessable card to exercise failure paths.',
-    settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+    settings: { baseTimerMs: 5000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 3500 },
     cards: [
       { id: 'shi', promptType: 'text', promptText: 'し', mediaUrl: null, answerMediaUrl: SHI_WAV, answers: ['shi', 'si'], hint: 'she has a fishing hook', tags: ['hiragana'] },
       { id: 'ka', promptType: 'text', promptText: 'か', mediaUrl: null, answerMediaUrl: KA_WAV, answers: ['ka'], hint: null, tags: ['hiragana'] },
@@ -122,7 +122,7 @@ const DECKS: MockDeck[] = [
     id: 'mock-piano',
     name: 'Mock piano (1 card)',
     description: 'One data:-SVG staff image; a perfect session is one answer away.',
-    settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10 },
+    settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
     cards: [
       { id: 'treble-c4', promptType: 'image', promptText: null, mediaUrl: STAFF_SVG, answerMediaUrl: null, answers: ['c4', 'c'], hint: 'one ledger line below the staff — middle C', tags: ['treble'] },
     ],
@@ -348,8 +348,9 @@ export function createMockApi(): Api {
         if (deckId === undefined) throw new Error(`unknown calibration ${sessionId}`);
         calibrationSessions.delete(sessionId);
         // Mirror of the real math (DESIGN.md "Timer calibration"): floor =
-        // median elapsed of correctly copied trials; window = floor + 1200ms
-        // retrieval allowance; base = window / box-1 multiplier (1.5),
+        // median elapsed of correctly copied trials; window = floor + the
+        // DECK'S retrieval allowance (contract #5 — a domain fact: tight for
+        // calculable material); base = window / box-1 multiplier (1.5),
         // rounded to 100ms, clamped [1500, 10000].
         const ok = trials
           .filter((t) => isCorrect(t.response, [t.text]))
@@ -362,9 +363,11 @@ export function createMockApi(): Api {
               ? ok[(ok.length - 1) / 2]
               : Math.round((ok[ok.length / 2 - 1] + ok[ok.length / 2]) / 2);
         const applied = ok.length >= 3;
+        const allowanceMs =
+          decks.find((d) => d.id === deckId)?.settings.retrievalAllowanceMs ?? 2200;
         const suggestedBaseTimerMs = Math.min(
           10000,
-          Math.max(1500, Math.round((floorMs + 1200) / 1.5 / 100) * 100),
+          Math.max(1500, Math.round((floorMs + allowanceMs) / 1.5 / 100) * 100),
         );
         if (applied) {
           const deck = decks.find((d) => d.id === deckId);
