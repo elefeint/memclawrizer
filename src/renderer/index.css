@@ -164,14 +164,12 @@ button:hover {
 .box-4 { background: light-dark(#7fae62, #62894a); }
 .box-5 { background: light-dark(#4f9a72, #3c7a58); }
 
-.tag-picker,
-.deck-settings {
+.tag-picker {
   grid-column: 1 / -1;
   font-size: 0.88rem;
 }
 
-.tag-picker summary,
-.deck-settings summary {
+.tag-picker summary {
   cursor: pointer;
   color: var(--muted);
   width: max-content;
@@ -192,25 +190,6 @@ button:hover {
   font-family: ui-monospace, monospace;
 }
 
-.deck-settings-body {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0.5rem 1.2rem;
-  padding: 0.5rem 0 0.2rem;
-}
-
-.deck-settings-body input {
-  width: 6.5em;
-  font: inherit;
-  color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--jar-line);
-  border-radius: 6px;
-  padding: 0.15rem 0.4rem;
-  margin-left: 0.4rem;
-}
-
 .deck-empty,
 .shelf-empty {
   color: var(--muted);
@@ -218,9 +197,92 @@ button:hover {
   list-style: none;
 }
 
-/* F7: Archive sits inside the settings disclosure; push it away from Save
-   so a slipped click lands on nothing. */
-.deck-settings-body .archive-button {
+/* F9: gear at the row's right edge — quiet until hovered/focused. */
+.gear-button {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.42rem 0.5rem;
+  margin-left: 0.5rem;
+  color: var(--muted);
+}
+
+.gear-button:hover,
+.gear-button:focus-visible {
+  color: var(--fg);
+}
+
+/* ------------------------------------------- deck settings screen ----- */
+/* F9 (DESIGN.md UI item 1b): the inline disclosure, grown up. Same quiet
+   register as the calibration screen — no cabinet, no urgency. */
+
+.settings-screen {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.6rem;
+}
+
+.settings-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.back-button {
+  flex: 0 0 auto;
+  font-family: ui-monospace, monospace;
+}
+
+.settings-heading h1 {
+  margin: 0;
+  font-size: 1.3rem;
+}
+
+.settings-context {
+  margin: 0.25rem 0 0;
+  color: var(--muted);
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  padding: 1.1rem 1.2rem;
+  border: 1px solid var(--cabinet-edge);
+  border-radius: 10px;
+  background: var(--cabinet);
+  font-size: 0.95rem;
+}
+
+.settings-field {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.settings-field input {
+  width: 7em;
+  font: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--jar-line);
+  border-radius: 6px;
+  padding: 0.25rem 0.5rem;
+}
+
+.settings-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+/* Archive keeps its distance from Save (F7 rule, new home). */
+.settings-actions .archive-button {
   margin-left: auto;
   color: var(--muted);
 }

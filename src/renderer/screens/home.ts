@@ -149,6 +149,7 @@ export async function mountHome(
           if (path !== null) say(`exported “${deck.name}” to ${path}`);
         });
       }),
+      gearButton(deck),
     );
 
     li.append(main, actions);
@@ -180,102 +181,29 @@ export async function mountHome(
       li.appendChild(details);
     }
 
-    // Per-deck settings.
-    {
-      const details = el('details', 'deck-settings');
-      const summary = el('summary');
-      summary.textContent = 'Settings';
-      details.appendChild(summary);
-      const form = el('div', 'deck-settings-body');
-
-      const timerLabel = el('label');
-      timerLabel.append(document.createTextNode('base timer (ms) '));
-      const timer = el('input');
-      timer.type = 'number';
-      timer.min = '1000';
-      timer.step = '500';
-      timer.value = String(deck.settings.baseTimerMs);
-      timerLabel.appendChild(timer);
-
-      const newLabel = el('label');
-      newLabel.append(document.createTextNode('new cards / session '));
-      const newCards = el('input');
-      newCards.type = 'number';
-      newCards.min = '0';
-      newCards.value = String(deck.settings.newCardsPerSession);
-      newLabel.appendChild(newCards);
-
-      const gateLabel = el('label');
-      gateLabel.append(document.createTextNode('pause new cards at box-1 ≥ '));
-      const gate = el('input');
-      gate.type = 'number';
-      gate.min = '1';
-      gate.value = String(deck.settings.maxBox1ForNew);
-      gateLabel.title =
-        'No new cards are introduced while this many cards sit in box 1 (struggling). ' +
-        'Below that, new cards fill only the remaining capacity.';
-      gateLabel.appendChild(gate);
-
-      const allowanceLabel = el('label');
-      allowanceLabel.append(document.createTextNode('thinking room (ms) '));
-      const allowance = el('input');
-      allowance.type = 'number';
-      allowance.min = '500';
-      allowance.step = '100';
-      allowance.value = String(deck.settings.retrievalAllowanceMs);
-      allowanceLabel.title =
-        'Added to your measured typing floor to form the box-1 window. ' +
-        'Tight for calculable material (music notes) so only recall fits; ' +
-        'looser where there is nothing to calculate (kana). ' +
-        'Takes effect on the next (re)calibration.';
-      allowanceLabel.appendChild(allowance);
-
-      form.append(
-        timerLabel,
-        newLabel,
-        gateLabel,
-        allowanceLabel,
-        button('Save', () => {
-          const settings = {
-            baseTimerMs: Math.max(1000, Number(timer.value) || deck.settings.baseTimerMs),
-            newCardsPerSession: Math.max(0, Number(newCards.value) || 0),
-            maxBox1ForNew: Math.max(1, Number(gate.value) || deck.settings.maxBox1ForNew),
-            retrievalAllowanceMs: Math.max(
-              500,
-              Number(allowance.value) || deck.settings.retrievalAllowanceMs,
-            ),
-          };
-          void api.decks.updateSettings(deck.id, settings).then(() => {
-            say(`saved settings for “${deck.name}”`);
-            details.open = false;
-          });
-        }),
-        // F8: re-run the copy-typing warm-up (fingers change, keyboards
-        // change). Returns home afterwards with the result announced.
-        button(
-          'Recalibrate timer',
-          () => nav.calibrate(deck.id, undefined, 'recalibrate'),
-          'recalibrate-button',
-        ),
-        // Archive lives inside the settings disclosure on purpose: two clicks
-        // away from the drill flow, misclick-resistant. No confirm dialog —
-        // archiving is reversible (Unarchive in the section below).
-        button(
-          'Archive deck',
-          () => {
-            void api.decks.archive(deck.id).then(() => {
-              say(`archived “${deck.name}” — find it under Archived below`);
-              void refreshDecks();
-            });
-          },
-          'archive-button',
-        ),
-      );
-      details.appendChild(form);
-      li.appendChild(details);
-    }
+    // F9: settings moved to their own screen behind the gear — no inline
+    // Settings disclosure anymore (Save/Recalibrate/Archive live there).
 
     return li;
+  }
+
+  /** F9: gear icon at the row's right edge → the deck settings screen.
+   *  Drawn inline (no font/emoji dependence); a native button, so keyboard
+   *  reachable like everything else on this screen. */
+  function gearButton(deck: DeckSummary): HTMLButtonElement {
+    const b = el('button', 'gear-button');
+    b.type = 'button';
+    b.setAttribute('aria-label', 'deck settings');
+    b.title = 'deck settings';
+    b.innerHTML =
+      '<svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true">' +
+      '<path fill="currentColor" fill-rule="evenodd" d="M6.8 1h2.4l.3 1.7q.63.18 1.2.5l1.4-1 ' +
+      '1.7 1.7-1 1.4q.32.57.5 1.2l1.7.3v2.4l-1.7.3q-.18.63-.5 1.2l1 1.4-1.7 1.7-1.4-1q-.57.32' +
+      '-1.2.5l-.3 1.7H6.8l-.3-1.7q-.63-.18-1.2-.5l-1.4 1-1.7-1.7 1-1.4q-.32-.57-.5-1.2L1 9.2V6.8' +
+      'l1.7-.3q.18-.63.5-1.2l-1-1.4 1.7-1.7 1.4 1q.57-.32 1.2-.5L6.8 1zm1.2 4.3a2.7 2.7 0 1 0 0 ' +
+      '5.4 2.7 2.7 0 0 0 0-5.4z"/></svg>';
+    b.addEventListener('click', () => nav.deckSettings(deck.id));
+    return b;
   }
 
   function trophyJar(t: TrophyView): HTMLElement {

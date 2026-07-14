@@ -181,7 +181,19 @@ function seedTrophies(): TrophyView[] {
   return seeds.reverse();
 }
 
-export function createMockApi(): Api {
+/** Injectable clock for tests (B9 mirror); the app uses the real date. */
+export interface MockApiHooks {
+  /** Local calendar day used by the once-a-day new-card gate. */
+  today?: () => string;
+}
+
+const realToday = (): string => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
+
+export function createMockApi(hooks: MockApiHooks = {}): Api {
   // Per-instance deck state: settings are mutable (updateSettings,
   // calibration), so each mock instance gets its own copies — tests stay
   // independent of each other and of module evaluation order.
@@ -194,6 +206,13 @@ export function createMockApi(): Api {
   // Calibration state (contract #4): deckId → ISO timestamp of last run.
   const calibratedAt = new Map<string, string>();
   const calibrationSessions = new Map<string, string>(); // sessionId → deckId
+  // B9 mirror (F9): new cards are introduced only in the deck's FIRST drill
+  // start of the local calendar day (capped by newCardsPerSession); repeat
+  // sessions re-drill already-introduced cards. Calibration sessions never
+  // touch this. Per-deck, in-memory, like the rest of the mock.
+  const today = hooks.today ?? realToday;
+  const introduced = new Map<string, Set<string>>(); // deckId → card ids ever introduced
+  const lastDrillDay = new Map<string, string>(); // deckId → local YYYY-MM-DD
   let sessionCounter = 0;
 
   const toView = (s: MockSession, e: QueueEntry): CardView => ({
@@ -251,14 +270,30 @@ export function createMockApi(): Api {
         if (!deck) throw new Error(`unknown deck ${deckId}`);
         // Mirrors B7: archived decks are not drillable (contract change #3).
         if (archivedAt.has(deckId)) throw new Error(`deck ${deckId} is archived`);
+
+        // B9 mirror: due (already-introduced) cards always drill; new cards
+        // enter only on the day's first drill start, up to newCardsPerSession.
+        const known = introduced.get(deckId) ?? new Set<string>();
+        const firstOfDay = lastDrillDay.get(deckId) !== today();
+        const due = deck.cards.filter((c) => known.has(c.id));
+        const fresh = firstOfDay
+          ? deck.cards
+              .filter((c) => !known.has(c.id))
+              .slice(0, Math.max(0, deck.settings.newCardsPerSession))
+          : [];
+        for (const c of fresh) known.add(c.id);
+        introduced.set(deckId, known);
+        lastDrillDay.set(deckId, today());
+        const queueCards = [...due, ...fresh];
+
         const id = `mock-session-${++sessionCounter}`;
         const s: MockSession = {
           id,
           deck,
-          queue: deck.cards.map((card, i) => ({ card, slotIndex: i, isRetry: false })),
-          queueLength: deck.cards.length,
+          queue: queueCards.map((card, i) => ({ card, slotIndex: i, isRetry: false })),
+          queueLength: queueCards.length,
           firstAttempted: new Set(),
-          jar: new Array(deck.cards.length).fill(null),
+          jar: new Array(queueCards.length).fill(null),
           ended: false,
         };
         sessions.set(id, s);

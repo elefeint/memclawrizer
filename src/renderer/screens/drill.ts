@@ -29,6 +29,8 @@ export interface Nav {
   /** F8 copy-typing warm-up: 'pre-drill' flows into the drill (carrying the
    *  tag selection), 'recalibrate' returns home with an announcement. */
   calibrate(deckId: string, tags: string[] | undefined, mode: 'pre-drill' | 'recalibrate'): void;
+  /** F9: the deck settings screen behind the deck row's gear icon. */
+  deckSettings(deckId: string): void;
   stats(deckId: string): void;
 }
 
