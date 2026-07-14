@@ -8,6 +8,10 @@ on:
   push:
     tags: ['v*']
 
+# Needed to create releases and upload their assets.
+permissions:
+  contents: write
+
 jobs:
   package:
     strategy:
@@ -47,9 +51,26 @@ jobs:
         if: runner.os == 'Linux'
         run: xvfb-run -a npm run test:e2e
 
-      - uses: actions/upload-artifact@v4
+      # Tagged builds publish installers as RELEASE ASSETS: permanent,
+      # per-version download pages, and — unlike workflow artifacts — they do
+      # not count against the Actions storage quota (which we exhausted on
+      # 2026-07-12 by storing ~350MB × 9 tags × 30 days of artifacts).
+      - name: Publish installers to the GitHub release
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "memclawrizer $GITHUB_REF_NAME" --notes "Installers built by CI. macOS app is unsigned: right-click → Open on first launch." || true
+          find out/make -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.nupkg' -o -name '*.zip' \) -print0 | xargs -0 gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber
+
+      # Manual runs keep a short-lived artifact instead (nothing permanent to
+      # attach them to). 3 days is plenty to download a test build.
+      - name: Upload artifact (manual runs only)
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@v4
         with:
           name: memclawrizer-${{ matrix.name }}
           path: out/make/**
           if-no-files-found: error
-          retention-days: 30
+          retention-days: 3

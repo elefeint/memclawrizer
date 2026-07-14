@@ -1,0 +1,32 @@
+name: cleanup-artifacts
+
+# One-button janitor: deletes ALL stored workflow artifacts to stop Actions
+# storage accrual (installers live on Releases now — see package.yml).
+# Run from the Actions tab whenever storage creeps up.
+on: workflow_dispatch
+
+permissions:
+  actions: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/github-script@v7
+        with:
+          script: |
+            let deleted = 0;
+            for await (const res of github.paginate.iterator(
+              github.rest.actions.listArtifactsForRepo,
+              { owner: context.repo.owner, repo: context.repo.repo, per_page: 100 },
+            )) {
+              for (const artifact of res.data) {
+                await github.rest.actions.deleteArtifact({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  artifact_id: artifact.id,
+                });
+                deleted++;
+              }
+            }
+            core.notice(`deleted ${deleted} artifacts`);
