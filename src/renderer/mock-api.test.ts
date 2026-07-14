@@ -188,3 +188,55 @@ describe('mock api timer calibration (contract change #4, F8)', () => {
     await expect(api.calibration.submit(sessionId, [])).rejects.toThrow(/unknown calibration/);
   });
 });
+
+describe('mock api once-a-day new cards (B9 mirror, F9)', () => {
+  const KANA_SETTINGS = {
+    baseTimerMs: 5000,
+    newCardsPerSession: 2,
+    maxBox1ForNew: 10,
+    retrievalAllowanceMs: 3500,
+  };
+
+  it('second same-day start introduces no new cards; the next day they return', async () => {
+    let day = '2026-07-12';
+    const api = createMockApi({ today: () => day });
+    await api.decks.updateSettings('mock-kana', KANA_SETTINGS);
+
+    // First drill of the day: no due cards yet, two new introduced.
+    const s1 = await api.session.start('mock-kana');
+    expect(s1.queueLength).toBe(2);
+    expect(s1.first?.cardId).toBe('shi');
+
+    // Same-day repeat: the SAME two (now due) drill again, no introduction.
+    const s2 = await api.session.start('mock-kana');
+    expect(s2.queueLength).toBe(2);
+    expect(s2.first?.cardId).toBe('shi');
+
+    // Next local day: the two due + the next two new.
+    day = '2026-07-13';
+    const s3 = await api.session.start('mock-kana');
+    expect(s3.queueLength).toBe(4);
+
+    // And one more same-day repeat stays at 4 (all introduced by now).
+    const s4 = await api.session.start('mock-kana');
+    expect(s4.queueLength).toBe(4);
+  });
+
+  it('a calibration run does not consume the day gate', async () => {
+    const api = createMockApi({ today: () => '2026-07-12' });
+    await api.decks.updateSettings('mock-kana', KANA_SETTINGS);
+    const c = await api.calibration.start('mock-kana');
+    await api.calibration.abort(c.sessionId);
+    // Still the day's first DRILL: new cards are introduced.
+    const s = await api.session.start('mock-kana');
+    expect(s.queueLength).toBe(2);
+  });
+
+  it('the gate is per deck', async () => {
+    const api = createMockApi({ today: () => '2026-07-12' });
+    await api.session.start('mock-kana'); // consumes kana's day
+    // Piano's first start of the day still introduces its card.
+    const piano = await api.session.start('mock-piano');
+    expect(piano.queueLength).toBe(1);
+  });
+});

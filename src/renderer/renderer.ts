@@ -6,6 +6,7 @@ import './index.css';
 import { mountHome } from './screens/home';
 import { mountDrill, type Nav } from './screens/drill';
 import { mountCalibrate } from './screens/calibrate';
+import { mountDeckSettings } from './screens/deck-settings';
 import { mountStats } from './screens/stats';
 
 const root = document.getElementById('app');
@@ -41,6 +42,7 @@ const nav: Nav = {
   home: (announce) => swap((r) => mountHome(r, nav, announce)),
   drill: (deckId, tags) => swap((r) => mountDrill(r, deckId, tags, nav)),
   calibrate: (deckId, tags, mode) => swap((r) => mountCalibrate(r, deckId, tags, mode, nav)),
+  deckSettings: (deckId) => swap((r) => mountDeckSettings(r, deckId, nav)),
   stats: (deckId) => swap((r) => mountStats(r, deckId, nav)),
 };
 
