@@ -66,7 +66,7 @@ requests go in the section below.
       sessions get newCardsPerSession=0 effectively. Injected-now tests:
       same-day second session no new; next-day new again; tag-filtered and
       full-deck sessions share the per-deck day gate.
-- [ ] F9 [frontend]: settings move out of the inline disclosure to a
+- [x] F9 [frontend]: settings move out of the inline disclosure to a
       dedicated deck-settings screen (timer, new/session, box-1 gate,
       thinking room, Save, Recalibrate, Archive) reached via a gear icon at
       the RIGHT edge of each active deck row; Back button returns to the
@@ -304,3 +304,22 @@ requests go in the section below.
   184 tests + tsc + lint green; e2e smoke green against a fresh package.
   Note: an empty first session (nothing due, nothing new) also consumes the
   day — consistent with "repeat sessions don't expand", flag if unwanted.
+- 2026-07-13 [frontend] F9 done. screens/deck-settings.ts behind a gear
+  icon button at each active row's right edge (inline SVG path, aria-label
+  "deck settings", quiet-until-hover; archived rows unchanged, no gear).
+  The screen carries all four fields with their tooltips + Save +
+  Recalibrate timer + Archive deck; Back (top-left, focused on mount) and
+  Escape return home; Save/Archive return home announcing through
+  mountHome's announce arg. Inline Settings <details> and its CSS removed
+  from the deck row. Nav gained deckSettings(deckId). Mock mirrors B9:
+  per-deck introduced-set + last-drill-day (LOCAL calendar day, injectable
+  via optional MockApiHooks.today); due cards always drill, new cards only
+  on the day's first drill start capped by newCardsPerSession; calibration
+  exempt; 3 spec tests (same-day repeat, next-day resume, per-deck gate,
+  calibration exemption). CDP-verified BOTH themes (20 assertions, 12
+  screenshots): gear opens populated screen, Save persists across reopen +
+  announces, Back/Escape return, Recalibrate flows warm-up→home with
+  result + context line gains the calibrated date, Archive lands in the
+  Archived section (gearless) + announces. New classes (testids frozen):
+  .gear-button, .settings-screen/-header/-heading/-context/-form/-field/
+  -actions, .back-button. 187 tests + tsc + lint green.
