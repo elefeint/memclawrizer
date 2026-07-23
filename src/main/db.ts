@@ -1,5 +1,5 @@
 /**
- * Database open + hand-rolled migrations (pattern adopted from ayamt ADR-0015):
+ * Database open + hand-rolled migrations (pattern shared with the author's earlier project):
  * a single-row schema_version table plus an ordered array of migration
  * functions run in a transaction on open. Newer app migrates older files;
  * older app refuses newer files. New files are created at the latest version

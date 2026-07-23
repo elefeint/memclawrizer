@@ -15,14 +15,15 @@ pack format; prompts can be text, image, or (later) audio.
 
 ## Stack
 
-Identical to `~/code/ayamt` — Electron Forge (Vite + TypeScript template),
+Identical to an earlier private Electron project by the same author ("the
+sibling project" below) — Electron Forge (Vite + TypeScript template),
 TypeScript end-to-end, main/preload as CJS, renderer ESM via Vite. Main process
 owns all file I/O and the DuckDB database (`@duckdb/node-api`); renderer is
 UI-only behind contextBridge with contextIsolation on, nodeIntegration off.
 Hand-rolled migrations (schema_version + ordered TS functions in a transaction on
 open). Minimal dependencies; targets Linux + Windows.
 
-Deliberate deviations from ayamt:
+Deliberate deviations from the sibling project:
 
 - **DB is not a "document" you point the app at.** Training state is per-machine,
   per-person, and the app should open instantly into "what's due today". The DB
@@ -30,7 +31,7 @@ Deliberate deviations from ayamt:
   Portability of *content* is handled by the deck pack format; portability of
   *progress* is "copy the .duckdb file". (A Settings override for the DB path is
   cheap to add later if sync via Syncthing/etc. is ever wanted; only then does
-  ayamt's copy-local/lock-file dance become relevant.)
+  the sibling project's copy-local/lock-file dance become relevant.)
 - **One small new dependency:** `fflate` (pure-JS, zero-dep, ~8 KB) to read/write
   zip-based deck packs. Node has no built-in zip; hand-rolling one violates the
   "own the behavior where it matters" ethos in the wrong direction. Import also
@@ -434,7 +435,7 @@ a reload). Renderer owns the timer UI and measures elapsed time; main clamps
 `<img src="mem://media/...">` / `<audio src=...>` — no IPC round-trip, no blob-URL
 bookkeeping, works for images and audio alike.
 
-## UI (three screens, no framework — DOM + TS like ayamt)
+## UI (three screens, no framework — DOM + TS like the sibling project)
 
 1. **Home / deck list** — each deck: name, cards due now, new cards remaining,
    box-distribution mini-bar, [Drill] [Drill by tag…] [Export], and a **gear
@@ -472,7 +473,7 @@ has no special knowledge of these decks — they go through the normal importer.
 
 ## Migrations & versioning
 
-Copied from ayamt: `schema_version` table + ordered array of migration functions
+Copied from the sibling project: `schema_version` table + ordered array of migration functions
 run in a transaction on open; newer app migrates older DB files, older app refuses
 newer files. Pack `format_version` handled the same way in `packs.ts`.
 
@@ -530,7 +531,7 @@ under `test/fixtures/`.
 
 ## Build order (suggested)
 
-1. Scaffold from Forge Vite+TS template (mirror ayamt configs), DB open/migrate.
+1. Scaffold from Forge Vite+TS template (mirror the sibling project's configs), DB open/migrate.
 2. `leitner.ts` pure logic + unit tests (queue building, box transitions).
 3. Pack importer + kana generator → real deck in the DB.
 4. Drill screen with timer, WebAudio tick/ding, attempt recording.

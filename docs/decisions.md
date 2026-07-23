@@ -1,6 +1,7 @@
 # Decision log (lightweight ADRs, newest first)
 
-Convention (adopted from ayamt): record decisions here first, then reflect them
+Convention (adopted from the author's earlier private project — "the sibling
+project" below): record decisions here first, then reflect them
 in CLAUDE.md. Statuses: accepted / superseded / proposed.
 
 ## ADR-0005 — EnableNodeCliInspectArguments fuse stays ON — accepted (2026-07-05)
@@ -19,8 +20,8 @@ Related knobs that make the smoke test possible: MEMCLAW_USERDATA (isolated
 profile/DB per run; DuckDB is single-writer) and the mini fixture seeded via
 the normal import path before launch.
 
-## ADR-0004 — Tooling deviations from ayamt — accepted (2026-07-05)
-ayamt's scaffold pins TypeScript ~4.5.4 (template default, ancient);
+## ADR-0004 — Tooling deviations from the sibling project — accepted (2026-07-05)
+The sibling project's scaffold pins TypeScript ~4.5.4 (template default, ancient);
 memclawrizer uses TS ^5 with `strict: true`. tsconfig uses `module: ESNext`
 for editor/vitest accuracy — the *emitted* main and preload bundles are still
 CommonJS via the Forge Vite plugin defaults, per ADR-0001.
@@ -54,7 +55,7 @@ Coordination happens in COORDINATION.md; the coordinator session arbitrates
 contract changes and drives integration.
 
 ## ADR-0002 — Hand-rolled migrations — accepted (2026-07-05)
-Adopted from ayamt ADR-0015: single-row `schema_version` table + ordered array
+Adopted from the sibling project's decision log: single-row `schema_version` table + ordered array
 of TS migration functions run in a transaction on open (src/main/db.ts). Newer
 app migrates older files; older app refuses newer files; new files run every
 migration in order. No down-migrations. The same versioning idea gates
@@ -63,9 +64,9 @@ migration in order. No down-migrations. The same versioning idea gates
 ## ADR-0001 — Stack and module system — accepted (2026-07-05)
 Electron Forge (Vite + TypeScript template), TypeScript end-to-end. Main and
 preload are emitted as CommonJS (native addon loads via require; robust preload
-under sandbox — ayamt ADR-0005 adopted); renderer is ESM via Vite. DuckDB via
+under sandbox — sibling-project decision adopted); renderer is ESM via Vite. DuckDB via
 official `@duckdb/node-api`, main process only; renderer is UI-only behind
 contextBridge (contextIsolation on, nodeIntegration off). Runtime deps are
 exactly: @duckdb/node-api, fflate, electron-squirrel-startup. The DB auto-opens
-from userData (not a document; unlike ayamt) — content portability is the
+from userData (not a document; unlike the sibling project) — content portability is the
 .deckpack format. Full app design: DESIGN.md.

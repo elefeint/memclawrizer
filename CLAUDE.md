@@ -41,9 +41,10 @@ worktrees, coordinated via `COORDINATION.md`. Ownership is exclusive:
 - Commit prefixes: `[backend]` / `[frontend]` / `[shared]`.
 
 ## Key decisions (details & rationale in DESIGN.md)
-- Stack mirrors `~/code/ayamt` (Electron Forge Vite+TS, main-process-owned DuckDB
+- Stack mirrors an earlier private project by the same author (Electron Forge
+  Vite+TS, main-process-owned DuckDB
   via @duckdb/node-api, hand-rolled migrations, minimal deps).
-- Unlike ayamt, the DB is NOT a document: auto-opened from userData, since training
+- Unlike that project, the DB is NOT a document: auto-opened from userData, since training
   state is per-person/per-machine. Content portability = deck packs.
 - Leitner 5 boxes (1/1d/3d/7d/30d); only the first attempt per session moves boxes;
   failure resets to box 1 (classic). Timers tighten as box increases.
