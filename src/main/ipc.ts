@@ -16,7 +16,7 @@ import { importPack, exportPack } from './packs';
 import { archiveDeck, removeDeck, unarchiveDeck, updateDeckSettings } from './queries';
 import { CalibrationManager } from './calibration';
 import { SessionManager } from './sessions';
-import { attemptRows, cardStats, deckStats, deckSummaries, trophyViews } from './stats';
+import { attemptRows, cardStats, deckStats, deckSummaries, records, trophyViews } from './stats';
 
 export function registerIpc(db: Db, sessions: SessionManager): void {
   const conn = db.conn;
@@ -84,4 +84,6 @@ export function registerIpc(db: Db, sessions: SessionManager): void {
   ipcMain.handle(IPC.statsAttempts, (_e, filter: AttemptFilter) => attemptRows(conn, filter ?? {}));
 
   ipcMain.handle(IPC.statsTrophies, () => trophyViews(conn));
+
+  ipcMain.handle(IPC.statsRecords, () => records(conn));
 }

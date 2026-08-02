@@ -60,7 +60,7 @@ requests go in the section below.
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
 ## New milestones (2026-08): arcade drill button + global Hall of Fame
-- [ ] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
+- [x] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
       shared/api.ts) — SQL aggregates in stats.ts/queries.ts: deckScores
       (sealed jars = perfect drill sessions per deck incl. archived, box-5
       counts, lifetime attempts), fastestCorrect (correct first-attempt min
@@ -342,3 +342,16 @@ requests go in the section below.
   Archived section (gearless) + announces. New classes (testids frozen):
   .gear-button, .settings-screen/-header/-heading/-context/-form/-field/
   -actions, .back-button. 187 tests + tsc + lint green.
+- 2026-08-02 [backend] B10 done. stats.records(): deckScores (all decks
+  incl. archived, sealed jars = perfect drill sessions, box-5 counts,
+  non-calibration lifetime attempts; sorted jars desc then name/id),
+  fastestCorrect (correct first-attempt min elapsed with deck/prompt/full
+  ISO date), largestPerfectSession (max jar length, most-recent tiebreak),
+  busiestDay + daysPracticed + totalAttempts on LOCAL calendar days (JS
+  day keys mirroring B9's setHours(0,0,0,0), DST-correct). Calibration
+  excluded from every figure — proven by an interleaved 10ms calibration
+  run that would otherwise win fastest/busiest. Empty-DB nulls/zeros
+  tested. ipc statsRecords wired. 189 tests + tsc + lint green; e2e smoke
+  green on a fresh package. Note for F10: busiestDay.dateIso is a local
+  'YYYY-MM-DD'; fastestCorrect/largestPerfectSession dateIso are full ISO
+  timestamps — format in the renderer.

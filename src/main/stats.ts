@@ -11,12 +11,14 @@ import type {
   CardStats,
   DeckStats,
   DeckSummary,
+  HallOfFame,
   TrophyView,
 } from '../shared/api';
 import { buildSessionQueue } from './leitner';
 import type { CardRow, CardStateRow } from './queries';
 import {
   latestCalibrationEndMs,
+  timestampToMs,
   listAttempts,
   listCards,
   listCardStates,
@@ -189,4 +191,116 @@ export async function trophyViews(conn: DuckDBConnection): Promise<TrophyView[]>
     size: r.jar.length,
     jar: r.jar,
   }));
+}
+
+// ---------------------------------------------------------------------------
+// Hall of Fame (contract #6) — global aggregates, counts only (the
+// no-percentages rule). Calibration rows/sessions are excluded everywhere.
+
+/** Local calendar-day key, mirroring B9's setHours(0,0,0,0) semantics
+ * (DST-correct; timestamps are stored UTC). */
+function localDayKey(ms: number): string {
+  const d = new Date(ms);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
+export async function records(conn: DuckDBConnection): Promise<HallOfFame> {
+  // Deck scores: every deck, archived included, ranked by sealed jars.
+  const deckRows = await conn.runAndReadAll(
+    `SELECT d.id, d.name, d.archived_at IS NOT NULL,
+            (SELECT count(*) FROM sessions s
+              WHERE s.deck_id = d.id AND s.perfect
+                AND coalesce(s.kind, 'drill') = 'drill'),
+            (SELECT count(*) FROM card_state cs
+              WHERE cs.deck_id = d.id AND cs.box = 5),
+            (SELECT count(*) FROM attempts a
+              WHERE a.deck_id = d.id AND a.outcome != 'calibration')
+     FROM decks d
+     ORDER BY 4 DESC, d.name, d.id`,
+  );
+  const deckScores = deckRows.getRows().map((r) => ({
+    deckId: String(r[0]),
+    deckName: String(r[1]),
+    archived: Boolean(r[2]),
+    sealedJars: Number(r[3]),
+    masteredCards: Number(r[4]),
+    lifetimeAttempts: Number(r[5]),
+  }));
+
+  // Fastest correct FIRST attempt ever (outcome='correct' excludes
+  // calibration rows by itself; is_first keeps retries out).
+  const fastestRows = await conn.runAndReadAll(
+    `SELECT coalesce(d.name, a.deck_id), c.prompt_text, c.prompt_type,
+            a.elapsed_ms, a.shown_at
+     FROM attempts a
+     LEFT JOIN decks d ON d.id = a.deck_id
+     LEFT JOIN cards c ON c.deck_id = a.deck_id AND c.id = a.card_id
+     WHERE a.outcome = 'correct' AND a.is_first_of_session
+     ORDER BY a.elapsed_ms ASC, a.id ASC LIMIT 1`,
+  );
+  const fr = fastestRows.getRows();
+  const fastestCorrect =
+    fr.length === 0
+      ? null
+      : {
+          deckName: String(fr[0][0]),
+          promptPreview:
+            fr[0][1] !== null
+              ? String(fr[0][1])
+              : fr[0][2] !== null
+                ? `[${String(fr[0][2])}]`
+                : '[gone]',
+          elapsedMs: Number(fr[0][3]),
+          dateIso: toIso(timestampToMs(fr[0][4])),
+        };
+
+  // Largest perfect drill session (few rows; max + tiebreaks in JS).
+  const perfectRows = await conn.runAndReadAll(
+    `SELECT coalesce(d.name, s.deck_id), s.jar, s.ended_at
+     FROM sessions s LEFT JOIN decks d ON d.id = s.deck_id
+     WHERE s.perfect AND coalesce(s.kind, 'drill') = 'drill'
+       AND s.jar IS NOT NULL AND s.ended_at IS NOT NULL`,
+  );
+  let largestPerfectSession: HallOfFame['largestPerfectSession'] = null;
+  for (const r of perfectRows.getRows()) {
+    const size = (JSON.parse(String(r[1])) as unknown[]).length;
+    const endedMs = timestampToMs(r[2]);
+    if (
+      largestPerfectSession === null ||
+      size > largestPerfectSession.size ||
+      (size === largestPerfectSession.size &&
+        endedMs > Date.parse(largestPerfectSession.dateIso))
+    ) {
+      largestPerfectSession = { deckName: String(r[0]), size, dateIso: toIso(endedMs) };
+    }
+  }
+
+  // Local-day aggregates from a light timestamp projection (personal-scale
+  // table); day keys computed in JS exactly like B9's local midnight.
+  const tsRows = await conn.runAndReadAll(
+    `SELECT shown_at FROM attempts WHERE outcome != 'calibration'`,
+  );
+  const perDay = new Map<string, number>();
+  for (const r of tsRows.getRows()) {
+    const key = localDayKey(timestampToMs(r[0]));
+    perDay.set(key, (perDay.get(key) ?? 0) + 1);
+  }
+  let busiestDay: HallOfFame['busiestDay'] = null;
+  for (const [dateIso, attempts] of [...perDay.entries()].sort(([a], [b]) =>
+    a.localeCompare(b),
+  )) {
+    if (busiestDay === null || attempts > busiestDay.attempts) {
+      busiestDay = { dateIso, attempts };
+    }
+  }
+
+  return {
+    deckScores,
+    fastestCorrect,
+    largestPerfectSession,
+    busiestDay,
+    daysPracticed: perDay.size,
+    totalAttempts: tsRows.getRows().length,
+  };
 }
