@@ -68,7 +68,7 @@ requests go in the section below.
       (local day, attempt count), daysPracticed, totalAttempts. Calibration
       rows/sessions excluded everywhere. ipc handler statsRecords (preload
       pre-wired). Real-DuckDB tests incl. exclusion proofs + empty-DB nulls.
-- [ ] F10 [frontend]: (a) arcade DRILL button per DESIGN.md UI item 1 —
+- [x] F10 [frontend]: (a) arcade DRILL button per DESIGN.md UI item 1 —
       mounted recessed well, convex accent dome, gloss, sink-on-press,
       unlit+disabled when dueCount==0 && newCount==0, taller rows, gear stays
       quiet, per-row Stats button REMOVED; (b) global Hall of Fame screen per
@@ -355,3 +355,41 @@ requests go in the section below.
   green on a fresh package. Note for F10: busiestDay.dateIso is a local
   'YYYY-MM-DD'; fastestCorrect/largestPerfectSession dateIso are full ISO
   timestamps — format in the renderer.
+- 2026-08-02 [frontend] F10 done, both halves.
+  (a) The deck row's Drill is a 54px convex dome mounted in a recessed well
+  (76px min row height): gloss upper-left, drop shadow, 3px sink + shadow
+  collapse on :active. Unlit (dimmed/desaturated/disabled, title "nothing
+  due right now") when dueCount === 0 && newCount === 0 — which also keeps
+  an empty session from consuming B9's once-a-day introduction. Per-row
+  Stats REMOVED; the gear is unchanged. The ALL-CAPS label is
+  `font-variant-caps: all-small-caps`, deliberately NOT text-transform, so
+  the accessible name stays exactly "Drill" (Playwright folds
+  text-transform into accname — the smoke test's
+  getByRole('button', { name: 'Drill', exact: true }) is safe).
+  (b) screens/hall-of-fame.ts is one GLOBAL screen routed as
+  nav.hallOfFame(deckId?) (Nav.stats is gone; renderer.ts no longer mounts a
+  per-deck stats screen). Header entry beside Import; the Archived section's
+  Stats deep-links with its deck preselected; Escape/← decks return home.
+  Dark CRT panel in BOTH themes — it re-points --fg/--muted/--accent/
+  --cabinet/--bg/--chart-* at phosphor values, which is why the reused charts
+  and tables needed no restyling. screens/stats.ts is now
+  screens/deck-detail.ts exporting mountDeckDetail(host, deckId) (no header,
+  no screen identity) plus fmtDate/fmtDateTime/fmtMs.
+  Pure layer: hall-of-fame-data.ts — competition ranking (ties share a rank,
+  next rank skips), arcade ordinals, parseDateIso (bare 'YYYY-MM-DD' read as
+  LOCAL midnight per the B10 note; full timestamps as instants), recordTiles
+  through injected formatters (null-safe on an empty DB), deckOptions +
+  initialDeckId. 14 unit tests. Mock records() now derives from the mock's
+  own state (jars/attempts move as you play, archived flag included) + a
+  third deck 'mock-done' (0 due / 0 new) so the unlit button is exercisable;
+  3 mock spec tests. 206 tests + tsc + lint green.
+  CDP-verified BOTH themes in one run (44 assertions, 10 screenshots):
+  lit + unlit rows, a real Input.dispatchMouseEvent press showing
+  matrix(1,0,0,1,0,3), all three CRT sections, ranks 1ST/2ND/3RD/3RD with
+  the leader highlighted, five record tiles incl. day-key vs timestamp
+  formatting, picker switching (detail replaced, not stacked), archive →
+  Archived section → Stats deep link (archived deck preselected and marked).
+  Notes for integration: the screen reuses the frozen `stats-screen` testid —
+  a 'hall-of-fame' testid (and 'drill-button') would be welcome if testids.ts
+  ever thaws. The empty-database branches (no decks, all records null) are
+  unit-tested only; they need a fresh profile to see in-app.

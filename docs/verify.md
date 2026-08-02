@@ -16,3 +16,19 @@ until B4 lands, then real). Run after F2 and again before any release.
 - [ ] Keyboard-only flow: whole session without touching the mouse; Esc aborts
 - [ ] Audio prompt cards auto-play once and replay on demand (when audio decks exist)
 - [ ] Volume slider affects tick/ding/chime; default is intentionally loud
+
+## F10 (2026-08): arcade drill button + Hall of Fame
+
+- [ ] The DRILL dome reads as *mounted* in the cabinet, not as a lollipop
+      pasted on the row (the well ring is the tell — check both themes)
+- [ ] Pressing it feels like a "thock": the dome sinks into its well and the
+      shadow collapses under the finger, at both a click and a keyboard Enter
+- [ ] An unlit row (nothing due, nothing new) reads as *a cabinet that's off*,
+      not as an error or a disabled-because-broken control
+- [ ] The dome is the only heavy thing on the row — the gear stays quiet
+- [ ] Hall of Fame reads as the screen INSIDE the cabinet in light theme too
+      (dark panel on a light page): legible, not gimmicky; scanlines should be
+      almost invisible — if they read as texture on the chart bars, dial down
+      `.crt::after`
+- [ ] Sealed jars read as THE score at a glance (rank + jars, not the table's
+      other numbers); no percentage appears anywhere on the panel
