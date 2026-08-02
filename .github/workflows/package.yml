@@ -61,8 +61,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "memclawrizer $GITHUB_REF_NAME" --notes "Installers built by CI. macOS app is unsigned: right-click → Open on first launch." || true
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "memclawrizer $GITHUB_REF_NAME" --notes "Installers built by CI. macOS app is unsigned: right-click → Open on first launch. Starter decks (.deckpack) attached — import them from the home screen." || true
           find out/make -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.nupkg' -o -name '*.zip' \) -print0 | xargs -0 gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber
+          # Starter decks ride along so installer users don't need the repo
+          # (Linux job only — identical bytes on every platform).
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber decks/*.deckpack
+          fi
 
       # Manual runs keep a short-lived artifact instead (nothing permanent to
       # attach them to). 3 days is plenty to download a test build.

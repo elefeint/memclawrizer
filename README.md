@@ -8,27 +8,59 @@ Underneath: a 5-box Leitner scheduler, a full audit log of every attempt, and a
 copy-typing calibration that sets the deadline just above your typing floor —
 enough time to remember, not enough to calculate.
 
-Built for memorizing piano notation and Japanese kana (starter decks included,
-with spoken syllables), but content is pluggable: a deck is a zip of
-`deck.json` + media. Design rationale lives in **DESIGN.md**.
+## Install
 
-## Run
+Grab an installer from the [releases page](../../releases):
 
-    npm install
-    npm start
+- **Linux** — `.deb` or `.rpm`
+- **Windows** — `Setup.exe`
+- **macOS** — `.zip` (the app is unsigned: right-click → Open on first launch)
 
-Import a deck from `decks/` on the home screen and drill. Electron + TypeScript
-+ DuckDB; installers for Linux/Windows/macOS via `npm run make` or the
-[releases page](../../releases).
+Starter decks (`.deckpack` files) are attached to each release: hiragana and
+katakana with spoken syllables, and treble/bass piano notation. On the home
+screen, **Import deck…**, pick a pack, hit **Drill**. Your first drill starts
+with a short copy-typing warm-up that calibrates the timer to your fingers.
 
-## Develop
+Progress lives in a local database (per machine); decks can be re-imported
+after updates without losing your Leitner state.
 
-    npm test            # unit + DB tests (real in-memory DuckDB)
-    npm run start:mock  # renderer against a deterministic mock backend
-    npm run test:e2e    # Playwright smoke test against the packaged app
+## Creating your own decks
 
-New decks: see `.claude/skills/deckpack/SKILL.md` for the format, or the
-generators in `scripts/`.
+A deck is a folder (or a zip renamed `.deckpack`) containing `deck.json` and
+an optional `media/` directory:
+
+```json
+{
+  "format_version": 2,
+  "id": "french-numbers",
+  "name": "French — numbers 0–100",
+  "settings": { "base_timer_ms": 6000, "new_cards_per_session": 5 },
+  "cards": [
+    {
+      "id": "fr-17",
+      "prompt": { "type": "text", "text": "17" },
+      "answers": ["dix-sept", "dix sept"],
+      "hint": "the teens switch pattern at 17",
+      "tags": ["teens"]
+    }
+  ]
+}
+```
+
+The rules that matter:
+
+- **Card ids are forever.** Re-importing a pack updates cards by id and keeps
+  your learning progress — rename an id and it becomes a new card.
+- **Matching is exact** (after trimming/lowercasing), so list every answer
+  variant you'd accept. Answers should be fast to type; there's a claw coming.
+- **Write hints.** The hint appears at the moment of failure — connect the
+  fact to something already known ("ten-seven"), don't just restate it.
+- **Tag generously** — tags power drill-by-tag subsets, so you can start small.
+- Prompts can be `text`, `image` (`"media": "media/x.svg"`), or `audio`; a
+  card may also carry `"answer_media"` — audio spoken after each attempt.
+
+Import the folder or zip via **Import deck…**. Invalid packs are rejected with
+an error naming the exact field. Full format details: [DESIGN.md](DESIGN.md).
 
 ## License & attribution
 
@@ -46,3 +78,5 @@ MIT © [Elena Felder](https://github.com/elefeint)
 - Built with [Claude Code](https://claude.com/claude-code) running Claude
   Fable 5 — design, code, and tests grew out of one long conversation, over
   the course of nine days.
+
+Developing or building from source: see [CONTRIBUTING.md](CONTRIBUTING.md).
