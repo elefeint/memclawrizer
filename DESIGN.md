@@ -437,24 +437,46 @@ bookkeeping, works for images and audio alike.
 
 ## UI (three screens, no framework — DOM + TS like the sibling project)
 
-1. **Home / deck list** — each deck: name, cards due now, new cards remaining,
-   box-distribution mini-bar, [Drill] [Drill by tag…] [Export], and a **gear
-   icon at the right edge of the row** opening the deck's settings screen
-   (2026-07-12: settings moved out of the inline disclosure). Global [Import].
-   Below the decks: the **trophy shelf** — sealed jars from perfect sessions,
-   newest first, hover for label (deck, date, size).
+1. **Home / deck list** — each deck row (2026-08 arcade revision): name,
+   box-distribution mini-bar, due/new counts on the left; a **big round
+   arcade DRILL button** as the row's single heavy element; a quiet gear icon
+   opening the deck's settings screen. The button is *mounted*: a recessed
+   circular well (inset ring in the cabinet-edge color) with a convex,
+   gloss-highlighted dome in the accent red, real drop shadow, and a 2–3 px
+   sink-on-press animation. Rows are tall enough (~76 px) that the ~54 px
+   button breathes. When a deck has nothing to drill (zero due, zero new),
+   the button renders **unlit** — dimmed and unpressable, like a cabinet
+   that's off (also prevents an empty session consuming the once-a-day
+   new-card introduction). Global [Import] and a **Hall of Fame** entry in
+   the header. Below the decks: the **trophy shelf**.
 1b. **Deck settings screen** (behind the gear): timer, new cards/session,
-   box-1 gate, thinking room, Save, Recalibrate, Archive — plus a **Back**
-   button returning to the overview.
+   box-1 gate, thinking room, Save, Recalibrate, Export, Archive — plus a
+   **Back** button returning to the overview.
 2. **Drill** — the game. Claw sprite travelling its rail, prize pit below, the
    session jar upper right, prompt, input, remaining count, failure feedback
    (answer + mnemonic). Esc aborts (the jar empties back into the pit). The prize pit draws from a
    built-in pool of a few hundred emoji trinkets (weighted so oddities are rare —
    a small variable-reward hook); the pool is a plain TS array, trivially
    extensible.
-3. **Stats** — per deck: box histogram, due forecast, response-time trend
-   (median elapsed_ms per day); per card: box, last success, attempts sparkline;
-   raw attempt log table (filter by deck/card/outcome/date).
+3. **Stats → Hall of Fame** (2026-08: one GLOBAL screen, not per-deck; the
+   per-row Stats button is gone). Styled as an arcade hall of fame: a
+   dark CRT-style panel (legitimately dark in both themes — it depicts a
+   screen inside the cabinet) with glowing monospace type. Content, top to
+   bottom:
+   - **High-score table**: decks ranked arcade-style, score = sealed jars;
+     columns for jars, mastered cards (box 5), lifetime attempts. Counts
+     only — the no-percentages rule holds even here.
+   - **Records**: fastest correct answer ever (card, deck, ms), largest
+     perfect session, busiest day, days practiced, total attempts.
+     Calibration rows excluded from every record.
+   - **Deck detail** below the fame section: a deck picker feeding the
+     existing working charts — box histogram, due forecast, response-time
+     trend, per-card table, filterable attempt log. Archived decks appear in
+     the picker (their history stays reachable; the Archived section's Stats
+     link deep-links here).
+   Backend support: `stats.records()` (contract change #6) computes the
+   global aggregates in SQL — DuckDB's home turf — rather than shipping all
+   attempts to the renderer.
 
 ## Starter decks (generated, shipped as .deckpacks)
 

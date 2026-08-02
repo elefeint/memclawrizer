@@ -59,6 +59,25 @@ requests go in the section below.
   ("thinking room"); generators author piano 2200 / kana 3500; decks
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
+## New milestones (2026-08): arcade drill button + global Hall of Fame
+- [ ] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
+      shared/api.ts) — SQL aggregates in stats.ts/queries.ts: deckScores
+      (sealed jars = perfect drill sessions per deck incl. archived, box-5
+      counts, lifetime attempts), fastestCorrect (correct first-attempt min
+      elapsed_ms with deck/prompt/date), largestPerfectSession, busiestDay
+      (local day, attempt count), daysPracticed, totalAttempts. Calibration
+      rows/sessions excluded everywhere. ipc handler statsRecords (preload
+      pre-wired). Real-DuckDB tests incl. exclusion proofs + empty-DB nulls.
+- [ ] F10 [frontend]: (a) arcade DRILL button per DESIGN.md UI item 1 —
+      mounted recessed well, convex accent dome, gloss, sink-on-press,
+      unlit+disabled when dueCount==0 && newCount==0, taller rows, gear stays
+      quiet, per-row Stats button REMOVED; (b) global Hall of Fame screen per
+      UI item 3 — dark CRT panel in both themes, high-score deck table
+      (score = sealed jars), records section, deck-picker feeding the
+      existing charts/tables (archived decks included; Archived section's
+      Stats link deep-links); header entry replaces per-row Stats; mock
+      records stub is yours to flesh. CDP screenshots both themes.
+
 ## New milestones (2026-07-12): once-a-day new cards + settings screen
 - [x] B9 [backend]: bug fix — session.start introduces new cards only when NO
       drill session (kind='drill') for this deck started earlier the same

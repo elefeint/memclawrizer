@@ -215,6 +215,35 @@ export interface AttemptRow {
   boxAfter: number;
 }
 
+/** Global hall-of-fame aggregates (contract change #6, additive, 2026-08).
+ *  Counts only — the no-percentages rule applies. Calibration rows are
+ *  excluded from every figure. */
+export interface HallOfFame {
+  /** Decks ranked by sealed jars (the arcade score), descending; includes
+   *  archived decks. */
+  deckScores: {
+    deckId: string;
+    deckName: string;
+    archived: boolean;
+    sealedJars: number;
+    /** Cards currently in box 5. */
+    masteredCards: number;
+    lifetimeAttempts: number;
+  }[];
+  /** Fastest correct first-attempt ever. Null until one exists. */
+  fastestCorrect: {
+    deckName: string;
+    promptPreview: string;
+    elapsedMs: number;
+    dateIso: string;
+  } | null;
+  largestPerfectSession: { deckName: string; size: number; dateIso: string } | null;
+  busiestDay: { dateIso: string; attempts: number } | null;
+  /** Distinct local days with at least one drill attempt. */
+  daysPracticed: number;
+  totalAttempts: number;
+}
+
 export interface AttemptFilter {
   deckId?: string;
   cardId?: string;
@@ -261,6 +290,8 @@ export interface Api {
     cards(deckId: string): Promise<CardStats[]>;
     attempts(filter: AttemptFilter): Promise<AttemptRow[]>;
     trophies(): Promise<TrophyView[]>;
+    /** Global hall-of-fame aggregates, computed in SQL (contract #6). */
+    records(): Promise<HallOfFame>;
   };
 }
 
@@ -283,4 +314,5 @@ export const IPC = {
   statsCards: 'stats:cards',
   statsAttempts: 'stats:attempts',
   statsTrophies: 'stats:trophies',
+  statsRecords: 'stats:records',
 } as const;

@@ -33,6 +33,7 @@ const api: Api = {
     cards: (deckId) => ipcRenderer.invoke(IPC.statsCards, deckId),
     attempts: (filter) => ipcRenderer.invoke(IPC.statsAttempts, filter),
     trophies: () => ipcRenderer.invoke(IPC.statsTrophies),
+    records: () => ipcRenderer.invoke(IPC.statsRecords),
   },
 };
 

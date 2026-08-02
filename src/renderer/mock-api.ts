@@ -459,6 +459,47 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
         },
       ],
       trophies: async () => [...trophies],
+      // Contract #6 stub (coordinator): derived from the mock's own state so
+      // the hall of fame renders meaningfully under start:mock. F10 owns it.
+      records: async () => {
+        const jarsByDeck = new Map<string, number>();
+        for (const t of trophies) {
+          jarsByDeck.set(t.deckId, (jarsByDeck.get(t.deckId) ?? 0) + 1);
+        }
+        const nameOf = (id: string) =>
+          decks.find((d) => d.id === id)?.name ?? trophies.find((t) => t.deckId === id)?.deckName ?? id;
+        const deckScores = [...new Set([...decks.map((d) => d.id), ...jarsByDeck.keys()])]
+          .map((id) => ({
+            deckId: id,
+            deckName: nameOf(id),
+            archived: archivedAt.has(id),
+            sealedJars: jarsByDeck.get(id) ?? 0,
+            masteredCards: id === 'mock-legacy' ? 7 : 0,
+            lifetimeAttempts: id === 'mock-legacy' ? 640 : 24,
+          }))
+          .sort((a, b) => b.sealedJars - a.sealedJars);
+        const biggest = trophies.reduce(
+          (best, t) => (best === null || t.size > best.size ? t : best),
+          null as TrophyView | null,
+        );
+        return {
+          deckScores,
+          fastestCorrect: {
+            deckName: nameOf('mock-kana'),
+            promptPreview: 'し',
+            elapsedMs: 740,
+            dateIso: '2026-07-30T09:00:00Z',
+          },
+          largestPerfectSession: biggest && {
+            deckName: biggest.deckName,
+            size: biggest.size,
+            dateIso: biggest.endedAtIso,
+          },
+          busiestDay: { dateIso: '2026-07-22', attempts: 57 },
+          daysPracticed: 31,
+          totalAttempts: 688,
+        };
+      },
     },
   };
 }
