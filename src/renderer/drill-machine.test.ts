@@ -479,6 +479,71 @@ describe('session end', () => {
   });
 });
 
+describe('practice rounds (contract #7: one trophy chance per day)', () => {
+  /** A flawless one-card session that ends with the given eligibility. */
+  function flawlessRun(trophyEligible: boolean | undefined, perfect = true) {
+    const d = deps([0.25]); // index 1 → '🎲'
+    const end = { perfect, jar: ['🎲'] };
+    const session: SessionStart = { ...sessionStart(card(), 1), trophyEligible };
+    const seq = run(
+      [
+        { type: 'START', session },
+        { type: 'TICK', nowMs: 0 },
+        { type: 'SUBMIT', text: 'shi' },
+        {
+          type: 'RESULT',
+          result: result({ outcome: 'correct', slotIndex: 0, next: null, remaining: 0, sessionEnd: end }),
+        },
+        { type: 'ANIMATION_DONE' }, // grab done → sealing or emptying
+      ],
+      d,
+    );
+    const done = reduce(seq.state, { type: 'ANIMATION_DONE' }, d);
+    return { seq, done, end };
+  }
+
+  it('carries eligibility from START so the UI knows before the first card', () => {
+    const eligible = reduce(
+      initialState,
+      { type: 'START', session: { ...sessionStart(card(), 1), trophyEligible: false } },
+      deps(),
+    );
+    expect(eligible.state.trophyEligible).toBe(false);
+    // Prizes still fill the jar during a practice round: only the stakes differ.
+    expect(eligible.state.slots).toEqual([{ kind: 'empty' }]);
+  });
+
+  it('a flawless PRACTICE round empties instead of sealing — no chime, ever', () => {
+    const { seq, done } = flawlessRun(false);
+    expect(seq.state.phase).toBe('emptying');
+    expect(seq.steps.at(-1)!.effects).toEqual([{ type: 'animateEmpty', jar: ['🎲'] }]);
+    expect(done.state.phase).toBe('done');
+    expect(effectTypes(seq.effects).concat(effectTypes(done.effects))).not.toContain(
+      'playSealChime',
+    );
+    // The prize still landed in its slot — the feedback loop is unchanged.
+    expect(seq.state.slots).toEqual([{ kind: 'prize', prize: '🎲' }]);
+  });
+
+  it('guards against a backend that reports perfect=true in a practice round', () => {
+    // Belt and braces: the seal needs BOTH the verdict and eligibility.
+    const { seq } = flawlessRun(false, true);
+    expect(seq.state.phase).toBe('emptying');
+  });
+
+  it('an eligible session still seals', () => {
+    const { seq } = flawlessRun(true);
+    expect(seq.state.phase).toBe('sealing');
+    expect(seq.steps.at(-1)!.effects[0]).toEqual({ type: 'playSealChime' });
+  });
+
+  it('treats an absent trophyEligible as eligible (older backends)', () => {
+    const { seq } = flawlessRun(undefined);
+    expect(seq.state.trophyEligible).toBe(true);
+    expect(seq.state.phase).toBe('sealing');
+  });
+});
+
 describe('tick acceleration', () => {
   it('interval is flat until 75% then shrinks to the panic rate', () => {
     expect(tickIntervalAt(0)).toBe(TICK_INTERVAL_BASE_MS);

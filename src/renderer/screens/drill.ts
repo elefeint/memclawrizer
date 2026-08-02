@@ -89,7 +89,13 @@ export async function mountDrill(
   const retryChip = el('span', 'retry-chip');
   retryChip.textContent = 'retry — no prize';
   retryChip.hidden = true;
-  hud.append(remainingEl, retryChip);
+  // F11: said from the START, never sprung at the end (DESIGN.md "One trophy
+  // chance per day") — a flawless run that silently failed to seal would read
+  // as a bug and would punish practising.
+  const practiceNote = el('span', 'practice-note');
+  practiceNote.textContent = 'practice round — today’s jar is already decided';
+  practiceNote.hidden = true;
+  hud.append(remainingEl, retryChip, practiceNote);
 
   const promptEl = el('div', 'prompt', TESTIDS.prompt);
   const input = el('input', 'answer-input', TESTIDS.answerInput);
@@ -522,17 +528,19 @@ export async function mountDrill(
       syncSlots(state.slots);
     }
     if (state.phase !== prev.phase && (state.phase === 'done' || state.phase === 'aborted')) {
-      if (state.phase === 'aborted' || (state.sessionEnd && !state.sessionEnd.perfect)) {
-        statusEl.textContent = 'nothing kept — the pit waits for tomorrow';
+      // A jar seals only when the run was flawless AND today's chance was
+      // still open; a practice round ends on its own quiet, non-punitive note.
+      const sealed = state.sessionEnd?.perfect === true && state.trophyEligible;
+      if (state.phase === 'aborted' || (state.sessionEnd && !sealed)) {
+        statusEl.textContent = state.trophyEligible
+          ? 'nothing kept — the pit waits for tomorrow'
+          : 'practice round — progress recorded, no jar today';
         statusEl.hidden = false;
-      } else if (state.sessionEnd?.perfect) {
+      } else if (sealed) {
         statusEl.textContent = 'sealed.';
         statusEl.hidden = false;
       }
-      exitTimer = window.setTimeout(
-        () => nav.home(),
-        state.sessionEnd?.perfect ? T.EXIT_DELAY_MS * 2 : T.EXIT_DELAY_MS,
-      );
+      exitTimer = window.setTimeout(() => nav.home(), sealed ? T.EXIT_DELAY_MS * 2 : T.EXIT_DELAY_MS);
     }
   }
 
@@ -638,6 +646,11 @@ export async function mountDrill(
     exitTimer = window.setTimeout(() => nav.home(), 1600);
   } else {
     buildJar(start.queueLength);
+    // Ghost jar: present, filling as usual, clearly not for keeps.
+    if (start.trophyEligible === false) {
+      jarEl.classList.add('practice');
+      practiceNote.hidden = false;
+    }
     dispatch({ type: 'START', session: start });
     rafId = requestAnimationFrame(loop);
     fallbackTimer = window.setInterval(tick, T.TICK_FALLBACK_MS);

@@ -165,6 +165,8 @@ interface MockSession {
   queueLength: number;
   firstAttempted: Set<string>;
   jar: (string | null)[];
+  /** Contract #7: only the deck's FIRST drill of the local day can seal. */
+  trophyEligible: boolean;
   ended: boolean;
 }
 
@@ -317,6 +319,7 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
           queueLength: queueCards.length,
           firstAttempted: new Set(),
           jar: new Array(queueCards.length).fill(null),
+          trophyEligible: firstOfDay,
           ended: false,
         };
         sessions.set(id, s);
@@ -324,10 +327,10 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
           sessionId: id,
           queueLength: s.queueLength,
           first: s.queue.length > 0 ? toView(s, s.queue[0]) : null,
-          // Contract #7 stub (coordinator): the mock already tracks the
-          // deck's last drill day for the once-a-day new-card rule — the
-          // same signal decides trophy eligibility. F11 owns the UI.
-          trophyEligible: firstOfDay,
+          // Contract #7: the mock already tracks the deck's last drill day
+          // for the once-a-day new-card rule — the same signal decides
+          // trophy eligibility (DESIGN.md "One trophy chance per day").
+          trophyEligible: s.trophyEligible,
         };
       },
 
@@ -360,7 +363,9 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
         let sessionEnd: SessionEnd | null = null;
         if (s.queue.length === 0) {
           s.ended = true;
-          const perfect = s.jar.every((x) => x !== null);
+          // Mirrors B11: a practice round records everything but never seals,
+          // so a flawless second run of the day reports perfect=false.
+          const perfect = s.trophyEligible && s.jar.every((x) => x !== null);
           sessionEnd = { perfect, jar: [...s.jar] };
           if (perfect) {
             trophies.unshift({

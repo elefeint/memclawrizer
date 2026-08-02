@@ -301,3 +301,66 @@ describe('mock api hall-of-fame records (contract change #6, F10)', () => {
     expect(piano?.sealedJars).toBe(9); // perfection is forever
   });
 });
+
+describe('mock api practice rounds (contract change #7, F11)', () => {
+  const clearPiano = async (api: ReturnType<typeof createMockApi>) => {
+    const s = await api.session.start('mock-piano');
+    const r = await api.session.answer(s.sessionId, {
+      cardId: 'treble-c4',
+      response: 'c4',
+      elapsedMs: 900,
+      timedOut: false,
+      prize: '🎁',
+    });
+    return { start: s, end: r.sessionEnd };
+  };
+
+  it('the day’s FIRST drill is eligible and a flawless run seals', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    const trophiesBefore = (await api.stats.trophies()).length;
+
+    const first = await clearPiano(api);
+    expect(first.start.trophyEligible).toBe(true);
+    expect(first.end?.perfect).toBe(true);
+    expect((await api.stats.trophies()).length).toBe(trophiesBefore + 1);
+  });
+
+  it('a SECOND same-day run is a practice round: flawless, but no seal', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    await clearPiano(api);
+    const trophiesAfterFirst = (await api.stats.trophies()).length;
+
+    const second = await clearPiano(api);
+    // Known from the START — the UI must not have to wait for the ending.
+    expect(second.start.trophyEligible).toBe(false);
+    // Every slot filled with a prize, yet the session does not seal…
+    expect(second.end?.jar).toEqual(['🎁']);
+    expect(second.end?.perfect).toBe(false);
+    // …and no trophy is minted (mirrors B11).
+    expect((await api.stats.trophies()).length).toBe(trophiesAfterFirst);
+  });
+
+  it('the next local day opens a fresh chance', async () => {
+    let day = '2026-08-02';
+    const api = createMockApi({ today: () => day });
+    await clearPiano(api);
+    expect((await api.session.start('mock-piano')).trophyEligible).toBe(false);
+
+    day = '2026-08-03';
+    const next = await clearPiano(api);
+    expect(next.start.trophyEligible).toBe(true);
+    expect(next.end?.perfect).toBe(true);
+  });
+
+  it('eligibility is per deck, and calibration does not consume it', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    await clearPiano(api);
+    // Another deck's first drill of the day is still eligible…
+    expect((await api.session.start('mock-kana')).trophyEligible).toBe(true);
+
+    const api2 = createMockApi({ today: () => '2026-08-02' });
+    const c = await api2.calibration.start('mock-piano');
+    await api2.calibration.abort(c.sessionId);
+    expect((await api2.session.start('mock-piano')).trophyEligible).toBe(true);
+  });
+});

@@ -986,6 +986,31 @@ button:hover {
   pointer-events: none;
 }
 
+/* F11 practice round: the jar is a GHOST — outlined, glass barely there —
+   so "this one isn't for keeps" is legible from the first card. The slots
+   themselves stay at full strength: prizes and pebbles still land visibly,
+   only the stakes differ. */
+.jar.practice {
+  border-style: dashed;
+  border-color: color-mix(in srgb, var(--jar-line) 55%, transparent);
+}
+
+.jar.practice .jar-layer,
+.jar.practice .jar-rim-svg {
+  opacity: 0.28;
+}
+
+.jar.practice .jar-slot.empty {
+  border-style: dotted;
+  opacity: 0.7;
+}
+
+.practice-note {
+  margin-left: auto;
+  font-style: italic;
+  opacity: 0.85;
+}
+
 .jar.sealed {
   box-shadow: 0 0 18px color-mix(in srgb, var(--good) 45%, transparent);
   border-color: var(--good);
