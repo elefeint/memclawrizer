@@ -324,6 +324,10 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
           sessionId: id,
           queueLength: s.queueLength,
           first: s.queue.length > 0 ? toView(s, s.queue[0]) : null,
+          // Contract #7 stub (coordinator): the mock already tracks the
+          // deck's last drill day for the once-a-day new-card rule — the
+          // same signal decides trophy eligibility. F11 owns the UI.
+          trophyEligible: firstOfDay,
         };
       },
 
@@ -551,6 +555,27 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
           daysPracticed: dayKeys.size,
           totalAttempts,
         };
+      },
+
+      // Contract #8 stub (coordinator): a plausible attendance history so the
+      // home header's streak + dot strip render under start:mock. Deliberate
+      // gap 9 days back, so a broken run is visible in the dots while the
+      // current streak stays healthy. F12 owns the real shape.
+      practiceHistory: async () => {
+        const dayMs = 86_400_000;
+        const midnight = new Date();
+        midnight.setHours(0, 0, 0, 0);
+        const days = Array.from({ length: 30 }, (_, i) => {
+          const back = 29 - i;
+          const d = new Date(midnight.getTime() - back * dayMs);
+          const pad = (n: number) => String(n).padStart(2, '0');
+          const skipped = back === 9 || back === 17 || back === 18;
+          return {
+            dateIso: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
+            attempts: skipped ? 0 : 6 + ((back * 7) % 19),
+          };
+        });
+        return { currentStreakDays: 9, longestStreakDays: 12, days };
       },
     },
   };

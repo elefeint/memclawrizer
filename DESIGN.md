@@ -130,6 +130,29 @@ single bad day with the loss of weeks of accumulated status, which turns the app
 into a source of dread; individually sealed jars accumulate monotonically and a bad
 day costs only that day's jar.
 
+### Practice streak (2026-08)
+
+An **attendance** streak — consecutive local days on which any deck was
+drilled — shown quietly in the home header beside a strip of ~30 day-dots.
+Explicitly not the perfect-session streak rejected above: it rewards showing
+up, which is fully within the user's control, rather than performing
+flawlessly, which is not.
+
+**Global, never per-deck.** Leitner deliberately makes decks go quiet (box-5
+cards aren't due for 30 days, and the unlit DRILL button prevents drilling
+them), so a per-deck counter would break *because the scheduler said not to
+practise* — punishing the user for the app's own decision, exactly the dread
+the streak rejection was about.
+
+The dot strip is the anti-cliff device: the number resets when a day is
+missed, but the dots keep the whole month visible, so a gap reads as "a day
+off" rather than "everything erased" — the failure mode where someone loses a
+long streak and quits entirely. Language stays factual ("practised 12 days
+running"): no flames, no warnings, no rescue offers. Counting back starts
+from today when today already has a drill attempt, otherwise from yesterday,
+so the number never reads 0 to someone who simply hasn't started yet today.
+No schema change — `attempts.shown_at`, calibration rows excluded.
+
 ### The trophy shelf at scale (denominational consolidation)
 
 Unbounded flat accumulation dilutes meaning (the 40th identical jar means less

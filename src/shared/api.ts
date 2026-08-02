@@ -92,6 +92,14 @@ export interface SessionStart {
   queueLength: number;
   /** Null when nothing is due and no new cards remain. */
   first: CardView | null;
+  /**
+   * False when this deck already had a drill session today: the run is a
+   * practice round and cannot seal a jar, however perfect it goes. The UI
+   * must say so from the START (ghost jar), never surprise at the end.
+   * (Contract change #7, additive, 2026-08 — DESIGN.md "One trophy chance
+   * per day".)
+   */
+  trophyEligible?: boolean;
 }
 
 export interface AnswerRequest {
@@ -244,6 +252,25 @@ export interface HallOfFame {
   totalAttempts: number;
 }
 
+/**
+ * Practice attendance (contract change #8, additive, 2026-08). An
+ * ATTENDANCE streak — showing up, not performing well — deliberately unlike
+ * the perfect-session streaks DESIGN.md rejects. Global across decks so the
+ * scheduler's own quiet days can't break it.
+ */
+export interface PracticeHistory {
+  /**
+   * Consecutive local days of drilling, counted back from today if today
+   * already has a drill attempt, otherwise from yesterday (so the number
+   * doesn't read 0 every morning before practice). 0 when neither day has
+   * one.
+   */
+  currentStreakDays: number;
+  longestStreakDays: number;
+  /** The last 30 local days, oldest first, including zero days. */
+  days: { dateIso: string; attempts: number }[];
+}
+
 export interface AttemptFilter {
   deckId?: string;
   cardId?: string;
@@ -292,6 +319,8 @@ export interface Api {
     trophies(): Promise<TrophyView[]>;
     /** Global hall-of-fame aggregates, computed in SQL (contract #6). */
     records(): Promise<HallOfFame>;
+    /** Global practice-day attendance for the home header (contract #8). */
+    practiceHistory(): Promise<PracticeHistory>;
   };
 }
 
@@ -315,4 +344,5 @@ export const IPC = {
   statsAttempts: 'stats:attempts',
   statsTrophies: 'stats:trophies',
   statsRecords: 'stats:records',
+  statsPracticeHistory: 'stats:practice-history',
 } as const;

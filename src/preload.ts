@@ -34,6 +34,7 @@ const api: Api = {
     attempts: (filter) => ipcRenderer.invoke(IPC.statsAttempts, filter),
     trophies: () => ipcRenderer.invoke(IPC.statsTrophies),
     records: () => ipcRenderer.invoke(IPC.statsRecords),
+    practiceHistory: () => ipcRenderer.invoke(IPC.statsPracticeHistory),
   },
 };
 
