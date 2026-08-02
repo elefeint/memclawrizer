@@ -1,5 +1,5 @@
 /**
- * Renderer entry: a tiny in-memory router over the three screens.
+ * Renderer entry: a tiny in-memory router over the screens.
  * All backend access goes through ./api (mock or real — never window.api).
  */
 import './index.css';
@@ -7,7 +7,7 @@ import { mountHome } from './screens/home';
 import { mountDrill, type Nav } from './screens/drill';
 import { mountCalibrate } from './screens/calibrate';
 import { mountDeckSettings } from './screens/deck-settings';
-import { mountStats } from './screens/stats';
+import { mountHallOfFame } from './screens/hall-of-fame';
 
 const root = document.getElementById('app');
 if (!root) throw new Error('missing #app');
@@ -43,7 +43,7 @@ const nav: Nav = {
   drill: (deckId, tags) => swap((r) => mountDrill(r, deckId, tags, nav)),
   calibrate: (deckId, tags, mode) => swap((r) => mountCalibrate(r, deckId, tags, mode, nav)),
   deckSettings: (deckId) => swap((r) => mountDeckSettings(r, deckId, nav)),
-  stats: (deckId) => swap((r) => mountStats(r, deckId, nav)),
+  hallOfFame: (deckId) => swap((r) => mountHallOfFame(r, deckId, nav)),
 };
 
 window.addEventListener('error', (e) => showError(e.error ?? e.message));

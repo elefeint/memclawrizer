@@ -75,7 +75,12 @@ export async function mountHome(
   const importBtn = el('button', 'import-button', TESTIDS.importButton);
   importBtn.type = 'button';
   importBtn.textContent = 'Import deck…';
-  header.append(h, importBtn);
+  // F10b: stats went global — one Hall of Fame entry in the header instead of
+  // a Stats button on every row.
+  const hofBtn = button('Hall of Fame', () => nav.hallOfFame(), 'hof-button');
+  const headerActions = el('div', 'home-header-actions');
+  headerActions.append(hofBtn, importBtn);
+  header.append(h, headerActions);
   screen.appendChild(header);
 
   const status = el('p', 'home-status');
@@ -277,7 +282,8 @@ export async function mountHome(
         },
         'unarchive-button',
       ),
-      button('Stats', () => nav.stats(deck.id)),
+      // Deep-links into the global hall of fame with this deck preselected.
+      button('Stats', () => nav.hallOfFame(deck.id)),
     );
 
     li.append(main, actions);

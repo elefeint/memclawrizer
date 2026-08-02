@@ -240,3 +240,64 @@ describe('mock api once-a-day new cards (B9 mirror, F9)', () => {
     expect(piano.queueLength).toBe(1);
   });
 });
+
+describe('mock api hall-of-fame records (contract change #6, F10)', () => {
+  it('scores decks by sealed jars and tracks the mock’s own state', async () => {
+    const api = createMockApi();
+    const hof = await api.stats.records();
+
+    // Every listed deck is on the board, plus the trophies-only pseudo-deck.
+    const ids = hof.deckScores.map((d) => d.deckId);
+    expect(ids).toContain('mock-kana');
+    expect(ids).toContain('mock-piano');
+    expect(ids).toContain('mock-done');
+    expect(ids).toContain('mock-legacy');
+
+    // Seeded: 113 legacy jars, 9 piano jars, none for the drillable decks.
+    const by = (id: string) => hof.deckScores.find((d) => d.deckId === id);
+    expect(by('mock-legacy')?.sealedJars).toBe(113);
+    expect(by('mock-piano')?.sealedJars).toBe(9);
+    expect(by('mock-kana')?.sealedJars).toBe(0);
+    expect(hof.deckScores[0].deckId).toBe('mock-legacy'); // sorted, jars desc
+
+    // Counts only — the mock never invents a percentage.
+    expect(hof.totalAttempts).toBe(
+      hof.deckScores.reduce((n, d) => n + d.lifetimeAttempts, 0),
+    );
+    // Date shapes the renderer must format differently (B10 note).
+    expect(hof.busiestDay?.dateIso).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(hof.fastestCorrect?.dateIso).toMatch(/^\d{4}-\d{2}-\d{2}T/);
+    expect(hof.daysPracticed).toBeGreaterThan(0);
+  });
+
+  it('a perfect session raises that deck’s score and can take the largest-session record', async () => {
+    const api = createMockApi();
+    const before = await api.stats.records();
+    const pianoBefore = before.deckScores.find((d) => d.deckId === 'mock-piano');
+
+    // mock-piano is a one-card deck: one correct answer seals a jar.
+    const s = await api.session.start('mock-piano');
+    await api.session.answer(s.sessionId, {
+      cardId: 'treble-c4',
+      response: 'c4',
+      elapsedMs: 900,
+      timedOut: false,
+      prize: '🎁',
+    });
+
+    const after = await api.stats.records();
+    const pianoAfter = after.deckScores.find((d) => d.deckId === 'mock-piano');
+    expect(pianoAfter?.sealedJars).toBe((pianoBefore?.sealedJars ?? 0) + 1);
+    expect(after.totalAttempts).toBeGreaterThan(before.totalAttempts);
+    expect(after.largestPerfectSession).not.toBeNull();
+  });
+
+  it('archiving marks the deck on the board without erasing its score', async () => {
+    const api = createMockApi();
+    await api.decks.archive('mock-piano');
+    const hof = await api.stats.records();
+    const piano = hof.deckScores.find((d) => d.deckId === 'mock-piano');
+    expect(piano?.archived).toBe(true);
+    expect(piano?.sealedJars).toBe(9); // perfection is forever
+  });
+});

@@ -1,14 +1,19 @@
 /**
- * Stats screen (F4): per-deck box histogram, due forecast, response-time
- * trend, per-card table, and a filterable attempt log. Plain DOM/SVG — no
- * chart library. Each chart plots a single series (no legend; the title names
- * it); the series hue is the app accent, validated ≥3:1 on both surfaces.
- * Tables carry the exact values, so charts stay sparsely labeled.
+ * Deck detail (F4, re-homed by F10b): per-deck box histogram, due forecast,
+ * response-time trend, per-card table, and a filterable attempt log. Plain
+ * DOM/SVG — no chart library. Each chart plots a single series (no legend;
+ * the title names it); the series hue is the app accent, validated ≥3:1 on
+ * both surfaces. Tables carry the exact values, so charts stay sparsely
+ * labeled.
+ *
+ * F10b: this is no longer a screen of its own. The global Hall of Fame owns
+ * the header/back button and mounts this section under its deck picker, so
+ * the whole thing renders on the CRT panel (which re-points --accent, --fg
+ * and friends at phosphor tones — every rule below inherits them).
  */
 import { api } from '../api';
-import { TESTIDS } from '../../shared/testids';
 import type { AttemptFilter, CardStats, Outcome } from '../../shared/api';
-import type { Nav } from './drill';
+import { parseDateIso } from '../hall-of-fame-data';
 
 const SVG_NS = 'http://www.w3.org/2000/svg';
 
@@ -40,12 +45,12 @@ function niceMax(v: number): number {
   return 10 * mag;
 }
 
-function fmtDate(iso: string): string {
-  const d = new Date(iso.length <= 10 ? `${iso}T00:00:00` : iso);
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+/** Short axis/table date. Bare 'YYYY-MM-DD' day keys read as LOCAL midnight. */
+export function fmtDate(iso: string): string {
+  return parseDateIso(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
 }
 
-function fmtDateTime(iso: string | null): string {
+export function fmtDateTime(iso: string | null): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleString(undefined, {
     month: 'short',
@@ -55,7 +60,7 @@ function fmtDateTime(iso: string | null): string {
   });
 }
 
-function fmtMs(ms: number | null): string {
+export function fmtMs(ms: number | null): string {
   if (ms === null) return '—';
   return ms >= 1000 ? `${(ms / 1000).toFixed(1)}s` : `${ms}ms`;
 }
@@ -266,17 +271,12 @@ function outcomeCell(outcome: Outcome): HTMLElement {
 
 // --------------------------------------------------------------- mount ----
 
-export async function mountStats(root: HTMLElement, deckId: string, nav: Nav): Promise<() => void> {
-  const screen = el('div', 'stats', TESTIDS.statsScreen);
-
-  const header = el('header', 'stats-header');
-  const back = el('button');
-  back.type = 'button';
-  back.textContent = '← decks';
-  back.addEventListener('click', () => nav.home());
-  const h = el('h1');
-  header.append(back, h);
-  screen.appendChild(header);
+/**
+ * Render one deck's charts + tables into `host` (which the caller owns and
+ * empties). Returns a teardown for the floating tooltip and the section.
+ */
+export async function mountDeckDetail(host: HTMLElement, deckId: string): Promise<() => void> {
+  const screen = el('div', 'deck-detail');
 
   const tooltip = makeTooltip();
   document.body.appendChild(tooltip.element);
@@ -288,15 +288,9 @@ export async function mountStats(root: HTMLElement, deckId: string, nav: Nav): P
   const attemptsSection = el('section', 'stats-section');
   screen.append(cardsSection, attemptsSection);
 
-  root.appendChild(screen);
+  host.appendChild(screen);
 
-  const [decks, deckStats, cards] = await Promise.all([
-    api.decks.list(),
-    api.stats.deck(deckId),
-    api.stats.cards(deckId),
-  ]);
-  const deckName = decks.find((d) => d.id === deckId)?.name ?? deckId;
-  h.textContent = deckName;
+  const [deckStats, cards] = await Promise.all([api.stats.deck(deckId), api.stats.cards(deckId)]);
 
   // --- charts ---
   const count = (v: number) => String(v);

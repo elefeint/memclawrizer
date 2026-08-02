@@ -482,45 +482,74 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
         },
       ],
       trophies: async () => [...trophies],
-      // Contract #6 stub (coordinator): derived from the mock's own state so
-      // the hall of fame renders meaningfully under start:mock. F10 owns it.
+      /**
+       * Contract #6 (F10b). Derived from the mock's OWN state — sealed jars
+       * and the largest perfect session move as you play, so the hall of
+       * fame is a live surface under start:mock rather than a fixture. The
+       * per-card figures mirror stats.cards() above (box = (i % 5) + 1, so
+       * a "mastered" card is one at index i % 5 === 4) and the same attempt
+       * arithmetic, keeping the two screens telling one story.
+       * Deterministic: no Math.random, no wall-clock arithmetic.
+       */
       records: async () => {
         const jarsByDeck = new Map<string, number>();
+        const dayKeys = new Set<string>();
         for (const t of trophies) {
           jarsByDeck.set(t.deckId, (jarsByDeck.get(t.deckId) ?? 0) + 1);
+          dayKeys.add(t.endedAtIso.slice(0, 10));
         }
         const nameOf = (id: string) =>
-          decks.find((d) => d.id === id)?.name ?? trophies.find((t) => t.deckId === id)?.deckName ?? id;
+          decks.find((d) => d.id === id)?.name ??
+          trophies.find((t) => t.deckId === id)?.deckName ??
+          id;
+        const cardsOf = (id: string) => decks.find((d) => d.id === id)?.cards ?? [];
+        // 'mock-legacy' is a trophies-only pseudo-deck (no cards): give it
+        // standing figures so the board has a plausible leader.
+        const LEGACY = { mastered: 7, attempts: 640 };
         const deckScores = [...new Set([...decks.map((d) => d.id), ...jarsByDeck.keys()])]
-          .map((id) => ({
-            deckId: id,
-            deckName: nameOf(id),
-            archived: archivedAt.has(id),
-            sealedJars: jarsByDeck.get(id) ?? 0,
-            masteredCards: id === 'mock-legacy' ? 7 : 0,
-            lifetimeAttempts: id === 'mock-legacy' ? 640 : 24,
-          }))
-          .sort((a, b) => b.sealedJars - a.sealedJars);
+          .map((id) => {
+            const cards = cardsOf(id);
+            const jars = jarsByDeck.get(id) ?? 0;
+            // stats.cards(): lifetimeCorrect 3i + lifetimeWrong i per card,
+            // plus one attempt per card for every sealed jar.
+            const fromCards = cards.reduce((sum, _c, i) => sum + 4 * i, 0);
+            return {
+              deckId: id,
+              deckName: nameOf(id),
+              archived: archivedAt.has(id),
+              sealedJars: jars,
+              masteredCards:
+                id === 'mock-legacy'
+                  ? LEGACY.mastered
+                  : cards.filter((_c, i) => i % 5 === 4).length,
+              lifetimeAttempts:
+                id === 'mock-legacy' ? LEGACY.attempts : fromCards + jars * cards.length,
+            };
+          })
+          .sort((a, b) => b.sealedJars - a.sealedJars || a.deckName.localeCompare(b.deckName));
+        // Largest sealed jar; ties go to the most recent (mirrors B10).
         const biggest = trophies.reduce(
           (best, t) => (best === null || t.size > best.size ? t : best),
           null as TrophyView | null,
         );
+        const totalAttempts = deckScores.reduce((n, d) => n + d.lifetimeAttempts, 0);
         return {
           deckScores,
           fastestCorrect: {
             deckName: nameOf('mock-kana'),
             promptPreview: 'し',
             elapsedMs: 740,
-            dateIso: '2026-07-30T09:00:00Z',
+            dateIso: '2026-07-30T09:00:00Z', // full ISO timestamp, per B10
           },
           largestPerfectSession: biggest && {
             deckName: biggest.deckName,
             size: biggest.size,
             dateIso: biggest.endedAtIso,
           },
+          // A LOCAL day key, per B10 — never a timestamp.
           busiestDay: { dateIso: '2026-07-22', attempts: 57 },
-          daysPracticed: 31,
-          totalAttempts: 688,
+          daysPracticed: dayKeys.size,
+          totalAttempts,
         };
       },
     },

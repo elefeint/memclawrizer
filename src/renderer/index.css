@@ -109,6 +109,13 @@ button:hover {
   gap: 1rem;
 }
 
+/* F10b: Hall of Fame sits beside Import — global entries, global scope. */
+.home-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .home-status {
   color: var(--good);
   font-family: ui-monospace, monospace;
@@ -1077,28 +1084,212 @@ button:hover {
   transform: translate(-50%, -50%);
 }
 
-/* ------------------------------------------------------------ stats ----- */
+/* ----------------------------------------------------- hall of fame ----- */
+/* F10b (DESIGN.md UI item 3). The page chrome stays theme-aware; the panel
+   inside it is the cabinet's own screen and is legitimately dark in BOTH
+   themes — the same license the drill screen has to own its look. */
 
-.stats {
-  --chart-grid: light-dark(#e0d8c8, #2e2a36);
-  --chart-baseline: light-dark(#c9c0ae, #3d3849);
-  --chart-ink: var(--muted);
-
+.hall {
   max-width: 1100px;
   margin: 0 auto;
   padding: 1.5rem 2rem 3rem;
 }
 
-.stats-header {
+.hall-header {
   display: flex;
   align-items: center;
   gap: 1rem;
 }
 
-.stats-header h1 {
-  font-size: 1.4rem;
+.hall-header h1 {
   margin: 0.5rem 0;
+  font-size: 1.35rem;
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  letter-spacing: 0.09em;
 }
+
+/* Every design token the reused charts/tables read is re-pointed at phosphor
+   values HERE, which is why deck-detail.ts needed no restyling of its own. */
+.crt {
+  --fg: #dcfced;
+  --muted: #74b491;
+  --accent: #ffc46b;
+  --bg: #08100d;
+  --cabinet: rgba(126, 240, 180, 0.05);
+  --cabinet-edge: rgba(126, 240, 180, 0.2);
+  --jar-line: rgba(126, 240, 180, 0.3);
+  --good: #7ef0b0;
+  --chart-grid: rgba(126, 240, 180, 0.14);
+  --chart-baseline: rgba(126, 240, 180, 0.32);
+  --chart-ink: var(--muted);
+  --crt-glow: 0 0 8px rgba(126, 240, 180, 0.4);
+
+  position: relative;
+  margin-top: 0.6rem;
+  padding: 1.3rem 1.5rem 1.7rem;
+  border: 1px solid rgba(126, 240, 180, 0.18);
+  border-radius: 14px;
+  color: var(--fg);
+  background: radial-gradient(ellipse at 50% -15%, #17291f 0%, #0a1410 55%, #070d0b 100%);
+  box-shadow:
+    inset 0 0 70px rgba(0, 0, 0, 0.8),
+    0 10px 24px rgba(0, 0, 0, 0.32);
+  overflow: hidden;
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+}
+
+/* Scanlines held at the threshold of visibility: legibility wins. */
+.crt::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(0, 0, 0, 0.07) 0 1px,
+    rgba(0, 0, 0, 0) 1px 3px
+  );
+}
+
+.crt-section + .crt-section {
+  margin-top: 1.7rem;
+}
+
+.crt-heading {
+  margin: 0 0 0.7rem;
+  padding-bottom: 0.35rem;
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #8ef2b8;
+  text-shadow: var(--crt-glow);
+  border-bottom: 1px solid rgba(126, 240, 180, 0.18);
+}
+
+.crt-note {
+  color: var(--muted);
+  font-style: italic;
+}
+
+/* --- high scores: the score IS the sealed-jar count --- */
+
+.crt-table-wrap {
+  overflow-x: auto;
+}
+
+.hof-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.hof-table th {
+  text-align: left;
+  padding: 0.2rem 0.7rem 0.5rem;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.hof-table td {
+  padding: 0.45rem 0.7rem;
+  border-top: 1px solid rgba(126, 240, 180, 0.1);
+  font-variant-numeric: tabular-nums;
+}
+
+.hof-table .col-rank {
+  width: 4.5rem;
+  color: var(--accent);
+  letter-spacing: 0.08em;
+}
+
+.hof-table .col-score,
+.hof-table .col-num {
+  text-align: right;
+}
+
+.hof-table td.col-score {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #b6ffd4;
+  text-shadow: var(--crt-glow);
+}
+
+.hof-row.hof-top td.col-score {
+  color: var(--accent);
+  text-shadow: 0 0 10px rgba(255, 196, 107, 0.55);
+}
+
+.hof-archived {
+  margin-left: 0.55rem;
+  font-size: 0.66rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* --- records board --- */
+
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(168px, 1fr));
+  gap: 0.8rem;
+}
+
+.record-tile {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.7rem 0.85rem;
+  border: 1px solid rgba(126, 240, 180, 0.16);
+  border-radius: 8px;
+  background: rgba(126, 240, 180, 0.04);
+}
+
+.record-label {
+  font-size: 0.66rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.record-value {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #b6ffd4;
+  text-shadow: var(--crt-glow);
+  font-variant-numeric: tabular-nums;
+}
+
+.record-detail {
+  font-size: 0.73rem;
+  line-height: 1.35;
+  color: var(--muted);
+}
+
+/* --- deck detail on the panel --- */
+
+.picker-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.deck-picker {
+  font-family: inherit;
+  letter-spacing: 0;
+  text-transform: none;
+  font-size: 0.88rem;
+}
+
+/* ------------------------------------------------------ stats charts ----- */
 
 .charts-row {
   display: grid;

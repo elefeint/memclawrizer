@@ -31,7 +31,9 @@ export interface Nav {
   calibrate(deckId: string, tags: string[] | undefined, mode: 'pre-drill' | 'recalibrate'): void;
   /** F9: the deck settings screen behind the deck row's gear icon. */
   deckSettings(deckId: string): void;
-  stats(deckId: string): void;
+  /** F10b: the GLOBAL hall of fame; deckId only preselects the deck-detail
+   *  picker (the Archived section's Stats link deep-links that way). */
+  hallOfFame(deckId?: string): void;
 }
 
 const CLAW_W = 64; // claw.svg head width; travel = rail width − CLAW_W
