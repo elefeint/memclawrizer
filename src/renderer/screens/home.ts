@@ -142,12 +142,9 @@ export async function mountHome(
 
     const actions = el('div', 'deck-actions');
     // Export moved to the gear screen (Elena, 2026-08): too rare to merit
-    // space next to the daily Drill/Stats.
-    actions.append(
-      button('Drill', () => startDrill(deck), 'drill-button'),
-      button('Stats', () => nav.stats(deck.id)),
-      gearButton(deck),
-    );
+    // space next to the daily Drill. Stats went GLOBAL in F10 (Hall of Fame
+    // in the header), so the row's only heavy element is the arcade button.
+    actions.append(drillControl(deck), gearButton(deck));
 
     li.append(main, actions);
 
@@ -182,6 +179,37 @@ export async function mountHome(
     // Settings disclosure anymore (Save/Recalibrate/Archive live there).
 
     return li;
+  }
+
+  /**
+   * F10 (DESIGN.md UI item 1): the row's single heavy element — a convex
+   * accent dome *mounted* in a recessed well. The well is what keeps it from
+   * reading as a lollipop: the ring is part of the cabinet, the dome sits in
+   * it and sinks on press. Still a native <button> whose accessible name is
+   * exactly "Drill" (the ALL-CAPS look is `font-variant-caps`, not
+   * text-transform, so the accname the smoke test matches stays untouched).
+   *
+   * Unlit = nothing due and nothing new: a cabinet that's off. Disabled, so
+   * an empty session can't burn the deck's once-a-day new-card introduction
+   * (B9) either.
+   */
+  function drillControl(deck: DeckSummary): HTMLElement {
+    const unlit = deck.dueCount === 0 && deck.newCount === 0;
+    const well = el('div', unlit ? 'drill-well unlit' : 'drill-well');
+    const b = el('button', 'drill-button');
+    b.type = 'button';
+    const label = el('span', 'drill-label');
+    label.textContent = 'Drill';
+    b.appendChild(label);
+    if (unlit) {
+      b.disabled = true;
+      b.title = 'nothing due right now';
+    } else {
+      b.title = `drill ${deck.name}`;
+      b.addEventListener('click', () => startDrill(deck));
+    }
+    well.appendChild(b);
+    return well;
   }
 
   /** F9: gear icon at the row's right edge → the deck settings screen.

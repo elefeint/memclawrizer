@@ -93,8 +93,10 @@ button:hover {
 .deck-row {
   display: grid;
   grid-template-columns: 1fr auto;
+  align-items: center;
   gap: 0.4rem 1rem;
-  padding: 0.8rem 1rem;
+  min-height: 76px; /* F10: the 54px dome needs room to breathe */
+  padding: 0.7rem 1rem;
   border: 1px solid var(--cabinet-edge);
   border-radius: 10px;
   background: var(--cabinet);
@@ -195,6 +197,102 @@ button:hover {
   color: var(--muted);
   font-style: italic;
   list-style: none;
+}
+
+/* ------------------------------------------- F10: arcade DRILL button ----
+   DESIGN.md UI item 1. The MOUNTING is the point: a recessed well cut into
+   the cabinet (inset shadow in --cabinet-edge tones) with a convex dome
+   sitting in it. Gloss upper-left, real drop shadow, and a 3px sink on
+   :active that collapses the shadow — the "thock". */
+
+.drill-well {
+  --dome: 54px;
+  display: grid;
+  place-items: center;
+  width: calc(var(--dome) + 16px);
+  height: calc(var(--dome) + 16px);
+  border-radius: 50%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    color-mix(in srgb, var(--cabinet-edge) 88%, #000),
+    var(--cabinet-edge) 75%
+  );
+  box-shadow:
+    inset 0 3px 6px rgba(0, 0, 0, 0.45),
+    inset 0 -2px 2px color-mix(in srgb, #fff 20%, transparent),
+    0 1px 0 color-mix(in srgb, #fff 16%, transparent);
+}
+
+.drill-well .drill-button {
+  /* The dome face sits a touch brighter than the ink-accent so the moulded
+     shading has somewhere to go without turning brown. */
+  --dome-face: color-mix(in srgb, var(--accent) 86%, #ff8a63);
+  position: relative;
+  width: var(--dome);
+  height: var(--dome);
+  padding: 0;
+  border: none;
+  border-radius: 50%;
+  color: #fff8f2; /* label on the red dome — the same ink in both themes */
+  background:
+    radial-gradient(circle at 34% 26%, rgba(255, 255, 255, 0.62), rgba(255, 255, 255, 0) 46%),
+    radial-gradient(circle at 50% 118%, rgba(0, 0, 0, 0.4), rgba(0, 0, 0, 0) 62%),
+    var(--dome-face);
+  box-shadow:
+    0 4px 0 color-mix(in srgb, var(--dome-face) 45%, #000),
+    0 7px 11px rgba(0, 0, 0, 0.4),
+    inset 0 -3px 7px rgba(0, 0, 0, 0.3),
+    inset 0 2px 3px rgba(255, 255, 255, 0.28);
+  cursor: pointer;
+  transition:
+    transform 70ms ease-out,
+    box-shadow 70ms ease-out,
+    filter 120ms ease-out;
+}
+
+.drill-well .drill-button:hover {
+  filter: brightness(1.07);
+}
+
+.drill-well .drill-button:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: 4px;
+}
+
+/* The thock: the dome sinks into its well and its shadow collapses. */
+.drill-well .drill-button:active {
+  transform: translateY(3px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, var(--dome-face) 45%, #000),
+    0 1px 3px rgba(0, 0, 0, 0.35),
+    inset 0 3px 8px rgba(0, 0, 0, 0.42);
+}
+
+.drill-label {
+  font-family: ui-monospace, 'Cascadia Mono', monospace;
+  font-variant-caps: all-small-caps; /* NOT text-transform: accname stays "Drill" */
+  font-size: 0.86rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.45);
+}
+
+/* Unlit: nothing due, nothing new — a cabinet that's off. */
+.drill-well.unlit {
+  opacity: 0.8;
+}
+
+.drill-well.unlit .drill-button {
+  filter: grayscale(0.85) brightness(0.72);
+  transform: translateY(2px);
+  box-shadow:
+    0 1px 0 rgba(0, 0, 0, 0.3),
+    inset 0 3px 7px rgba(0, 0, 0, 0.35);
+  cursor: not-allowed;
+}
+
+.drill-well.unlit .drill-label {
+  text-shadow: none;
 }
 
 /* F9: gear at the row's right edge — quiet until hovered/focused. */

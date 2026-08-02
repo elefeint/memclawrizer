@@ -91,6 +91,17 @@ interface MockDeck {
   description: string;
   settings: DeckSettings;
   cards: MockCard[];
+  /**
+   * Scheduling counts the mock has no real Leitner state for. Default (all
+   * cards due, all cards new) keeps the drillable decks one click away;
+   * 'mock-done' overrides them to zero so the F10 UNLIT drill button is
+   * exercisable under start:mock.
+   */
+  counts?: {
+    due: number;
+    new: number;
+    boxes: [number, number, number, number, number];
+  };
 }
 
 const STAFF_SVG =
@@ -125,6 +136,18 @@ const DECKS: MockDeck[] = [
     settings: { baseTimerMs: 7000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
     cards: [
       { id: 'treble-c4', promptType: 'image', promptText: null, mediaUrl: STAFF_SVG, answerMediaUrl: null, answers: ['c4', 'c'], hint: 'one ledger line below the staff — middle C', tags: ['treble'] },
+    ],
+  },
+  {
+    id: 'mock-done',
+    name: 'Mock done (nothing due)',
+    description: 'Everything scheduled for later — renders the unlit DRILL button.',
+    settings: { baseTimerMs: 4000, newCardsPerSession: 5, maxBox1ForNew: 10, retrievalAllowanceMs: 2200 },
+    counts: { due: 0, new: 0, boxes: [0, 1, 1, 0, 1] },
+    cards: [
+      { id: 'done-a', promptType: 'text', promptText: 'あ', mediaUrl: null, answerMediaUrl: null, answers: ['a'], hint: null, tags: ['hiragana'] },
+      { id: 'done-i', promptType: 'text', promptText: 'い', mediaUrl: null, answerMediaUrl: null, answers: ['i'], hint: null, tags: ['hiragana'] },
+      { id: 'done-u', promptType: 'text', promptText: 'う', mediaUrl: null, answerMediaUrl: null, answers: ['u'], hint: null, tags: ['hiragana'] },
     ],
   },
 ];
@@ -233,9 +256,9 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
     name: d.name,
     description: d.description,
     cardCount: d.cards.length,
-    dueCount: d.cards.length,
-    newCount: d.cards.length,
-    boxCounts: [d.cards.length, 0, 0, 0, 0],
+    dueCount: d.counts?.due ?? d.cards.length,
+    newCount: d.counts?.new ?? d.cards.length,
+    boxCounts: d.counts?.boxes ?? [d.cards.length, 0, 0, 0, 0],
     settings: { ...d.settings },
     tags: [...new Set(d.cards.flatMap((c) => c.tags))],
   });
