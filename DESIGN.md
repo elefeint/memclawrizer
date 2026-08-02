@@ -108,6 +108,23 @@ spent, so the next real chance is tomorrow's session. Scarcity of attempts is pa
 of what makes a sealed jar worth having, and the unfinished feeling after a
 one-pebble session is exactly the tension that brings you back.
 
+**One trophy chance per day (2026-08, closing a loophole).** The paragraph above
+was intent, not implementation: failed cards reset to box 1 and box 1 is always
+due, so simply starting a *second* session the same day re-served the cards you
+had just seen — and a perfect run of cards you saw ten minutes ago is not a
+memory achievement. Rule: **only a deck's first drill session of the local
+calendar day can seal a jar.** Later same-day sessions drill and record
+everything as usual (attempts logged, boxes moved by their first attempts) but
+end unsealed. This reuses B9's `hasDrillSessionSince` — the same day-check that
+gates new-card introduction; `sessions.start` already computes `drilledToday`.
+
+Later sessions must be **labelled as practice from the start**, never surprised
+at the end: a perfect run that silently fails to seal would read as a bug and
+punish the user for practising. `SessionStart` carries `trophyEligible`
+(contract #7); when false the drill screen shows a ghost/outlined jar and a
+quiet "practice round — today's jar is already decided" line. Practising more
+should feel free, not penalised.
+
 Rejected: perfect-session *streaks* (Duolingo-style). Streak breakage punishes a
 single bad day with the loss of weeks of accumulated status, which turns the app
 into a source of dread; individually sealed jars accumulate monotonically and a bad

@@ -59,6 +59,25 @@ requests go in the section below.
   ("thinking room"); generators author piano 2200 / kana 3500; decks
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
+## Queued (2026-08, pre-1.0)
+- [ ] B11 [backend]: one trophy chance per day (DESIGN.md "One trophy chance
+      per day"). sessions.start already computes `drilledToday` via
+      hasDrillSessionSince — carry it as the session's trophyEligible; at
+      session end only seal (perfect=true + jar persisted) when eligible.
+      Later same-day sessions record attempts/boxes as usual but never seal.
+      SessionStart gains `trophyEligible: boolean` (contract #7, additive).
+      Tests: first session of the day seals; a perfect SECOND session the same
+      day does not; next local day seals again; calibration doesn't consume it.
+- [ ] F11 [frontend]: honour trophyEligible — ghost/outlined jar + quiet
+      "practice round — today's jar is already decided" line when false; no
+      seal ceremony, no chime; the empty-back-to-pit ending stays as-is.
+- [ ] Kana hints (coordinator, pending Elena's go-ahead): gen-kana.ts writes
+      hints — voiced/semi-voiced systematically (dakuten = base kana, voiced),
+      base kana as shape mnemonics for Elena to veto. Regenerate + goldens.
+- [ ] Practice-day streak (pending Elena's global-vs-per-deck call): global
+      consecutive-days counter + ~30-day dot strip in the home header;
+      attendance not perfection; no schema change (attempts.shown_at).
+
 ## New milestones (2026-08): arcade drill button + global Hall of Fame
 - [x] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
       shared/api.ts) — SQL aggregates in stats.ts/queries.ts: deckScores
