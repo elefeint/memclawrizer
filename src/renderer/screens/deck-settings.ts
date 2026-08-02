@@ -122,6 +122,14 @@ export async function mountDeckSettings(
       () => nav.calibrate(deck.id, undefined, 'recalibrate'),
       'recalibrate-button',
     ),
+    // Export lives here rather than on the deck row (Elena, 2026-08): it's a
+    // rare data-liberation action — writes a content-only .deckpack (cards,
+    // media, current settings; no learning state) via a native save dialog.
+    button('Export deck…', () => {
+      void api.decks.export(deck.id).then((path) => {
+        if (path !== null) nav.home(`exported “${deck.name}” to ${path}`);
+      });
+    }),
     // Archive is already two clicks from the drill flow (gear → here) and
     // reversible (Unarchive in the home's Archived section) — no confirm.
     button(

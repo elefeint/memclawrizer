@@ -141,14 +141,11 @@ export async function mountHome(
     main.append(name, boxMiniBar(deck.boxCounts), counts);
 
     const actions = el('div', 'deck-actions');
+    // Export moved to the gear screen (Elena, 2026-08): too rare to merit
+    // space next to the daily Drill/Stats.
     actions.append(
       button('Drill', () => startDrill(deck), 'drill-button'),
       button('Stats', () => nav.stats(deck.id)),
-      button('Export', () => {
-        void api.decks.export(deck.id).then((path) => {
-          if (path !== null) say(`exported “${deck.name}” to ${path}`);
-        });
-      }),
       gearButton(deck),
     );
 
