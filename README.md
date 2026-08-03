@@ -75,8 +75,9 @@ MIT © [Elena Felder](https://github.com/elefeint)
   1990s English-learning CD (its gun is now a claw).
 - Leitner scheduling as explained in Chris Walker's
   ["The Leitner Box — How to Remember Anything Forever"](https://www.youtube.com/watch?v=uvF1XuseZFE).
-- Built with [Claude Code](https://claude.com/claude-code) running Claude
-  Fable 5 — design, code, and tests grew out of one long conversation, over
-  the course of nine days.
+- Built with [Claude Code](https://claude.com/claude-code) — design, code and
+  tests grew out of one long conversation, on and off across a month. Claude
+  Fable 5 did the original nine-day build; Claude Opus 5 took over for the
+  later work.
 
 Developing or building from source: see [CONTRIBUTING.md](CONTRIBUTING.md).
