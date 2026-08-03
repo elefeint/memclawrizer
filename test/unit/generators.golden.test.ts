@@ -70,6 +70,27 @@ describe('kana decks', () => {
     );
   });
 
+  it('carry a mnemonic on every card, derived structurally for voiced/yōon', () => {
+    // These decks shipped with hint: null on all 104 cards for weeks — the
+    // "logical attachment" pillar was silently inert. Guard it.
+    for (const deck of [hira, kata]) {
+      for (const card of deck.cards) {
+        expect(card.hint, `${card.id} hint`).toBeTruthy();
+      }
+    }
+    // Derived hints name the base kana IN THE RIGHT SCRIPT and the mark.
+    const hiraJi = hira.cards.find((c) => c.id === 'hira-ji');
+    expect(hiraJi?.hint).toContain('し shi');
+    expect(hiraJi?.hint).toContain('゛');
+    const kataGa = kata.cards.find((c) => c.id === 'kata-ga');
+    expect(kataGa?.hint).toContain('カ ka');
+    expect(kata.cards.find((c) => c.id === 'kata-kya')?.hint).toContain('キ ki');
+    // The pairs that actually get confused are contrasted explicitly.
+    expect(hira.cards.find((c) => c.id === 'hira-shi')?.hint).toContain('じ');
+    expect(kata.cards.find((c) => c.id === 'kata-shi')?.hint).toContain('ツ');
+    expect(kata.cards.find((c) => c.id === 'kata-n')?.hint).toContain('ソ');
+  });
+
   it('cover 46 base + 25 voiced/semi-voiced + 33 yōon = 104 cards per script', () => {
     for (const deck of [hira, kata]) {
       expect(deck.cards).toHaveLength(104);
