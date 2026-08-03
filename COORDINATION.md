@@ -60,7 +60,7 @@ requests go in the section below.
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
 ## Queued (2026-08, pre-1.0)
-- [ ] B11 [backend]: one trophy chance per day (DESIGN.md "One trophy chance
+- [x] B11 [backend]: one trophy chance per day (DESIGN.md "One trophy chance
       per day"). sessions.start already computes `drilledToday` via
       hasDrillSessionSince — carry it as the session's trophyEligible; at
       session end only seal (perfect=true + jar persisted) when eligible.
@@ -68,6 +68,12 @@ requests go in the section below.
       SessionStart gains `trophyEligible: boolean` (contract #7, additive).
       Tests: first session of the day seals; a perfect SECOND session the same
       day does not; next local day seals again; calibration doesn't consume it.
+      DONE (2026-08-02): eligibility decided once in `start` from the existing
+      `drilledToday` (no second mechanism), carried on the in-memory session
+      only — a session can't survive a restart (the queue lives in main and
+      `answer` rejects unknown ids), so an interrupted run can never seal and
+      a persisted column would have no reader. `SessionStart.trophyEligible`
+      is returned on both the normal and the empty-queue path.
 - [ ] F11 [frontend]: honour trophyEligible — ghost/outlined jar + quiet
       "practice round — today's jar is already decided" line when false; no
       seal ceremony, no chime; the empty-back-to-pit ending stays as-is.

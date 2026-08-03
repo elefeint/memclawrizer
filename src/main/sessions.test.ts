@@ -430,6 +430,169 @@ describe('once-a-day new-card introduction (B9)', () => {
   });
 });
 
+describe('one trophy chance per day (B11)', () => {
+  // Local-component dates: the gate works on LOCAL calendar days.
+  const DAY1_9AM = new Date(2026, 7, 3, 9, 0, 0);
+  const DAY1_11AM = new Date(2026, 7, 3, 11, 0, 0);
+  const DAY2_NOON = new Date(2026, 7, 4, 12, 0, 0);
+  const CARDS = ['dot', 'ka', 'n', 'shi'];
+
+  let db: Db;
+  let nowRef: { now: Date };
+  let sm: SessionManager;
+
+  beforeEach(async () => {
+    db = await openDatabase(':memory:');
+    await importPack(db.conn, MINI, DAY1_9AM);
+    nowRef = { now: DAY1_9AM };
+    sm = manager(db, nowRef);
+  });
+
+  /** Answers the given cards correctly in order; returns the last result. */
+  async function clear(sessionId: string, ids: string[], prize = '⭐') {
+    let r;
+    for (const cardId of ids) {
+      r = await sm.answer(sessionId, {
+        cardId, response: cardId, elapsedMs: 1000, timedOut: false, prize,
+      });
+    }
+    return r;
+  }
+
+  it("the day's first session seals a perfect run", async () => {
+    const start = await sm.start('mini');
+    expect(start.trophyEligible).toBe(true);
+    const r = await clear('session-1', CARDS);
+    expect(r?.sessionEnd).toEqual({ perfect: true, jar: ['⭐', '⭐', '⭐', '⭐'] });
+    expect(await trophyViews(db.conn)).toHaveLength(1);
+  });
+
+  it('a perfect SECOND session the same day does not seal and adds no trophy', async () => {
+    // Session 1 (eligible): dot fails its first attempt, so it drops to box 1
+    // and is due again immediately — the loophole B11 closes.
+    await sm.start('mini');
+    await sm.answer('session-1', {
+      cardId: 'dot', response: 'zzz', elapsedMs: 500, timedOut: false, prize: null,
+    });
+    const r1 = await clear('session-1', ['ka', 'n', 'shi', 'dot']);
+    expect(r1?.sessionEnd?.perfect).toBe(false);
+    expect(await trophyViews(db.conn)).toHaveLength(0);
+
+    // Session 2, same local day: only dot is due, and it is answered
+    // correctly — a full jar that must NOT seal.
+    nowRef.now = DAY1_11AM;
+    const second = await sm.start('mini');
+    expect(second.trophyEligible).toBe(false);
+    expect(second.queueLength).toBe(1);
+    const r2 = await sm.answer('session-2', {
+      cardId: 'dot', response: 'dot', elapsedMs: 900, timedOut: false, prize: '🦆',
+    });
+    // The jar filled — but the run is practice, so it ends unsealed.
+    expect(r2.sessionEnd).toEqual({ perfect: false, jar: ['🦆'] });
+    expect(await trophyViews(db.conn)).toHaveLength(0);
+
+    // ...and nothing was sealed in the DB either: no perfect flag, no jar.
+    const row = await db.conn.runAndReadAll(
+      `SELECT perfect, jar, ended_at IS NOT NULL FROM sessions WHERE id = 'session-2'`,
+    );
+    expect(row.getRows()[0]).toEqual([false, null, true]);
+
+    // The attempt still counted for Leitner: dot climbed to box 2.
+    expect((await getCardState(db.conn, 'mini', 'dot'))?.box).toBe(2);
+  });
+
+  it('the next local day seals again', async () => {
+    // Day 1: an imperfect run (dot missed) that leaves dot due again, then a
+    // same-day practice round that clears it without sealing.
+    await sm.start('mini');
+    await sm.answer('session-1', {
+      cardId: 'dot', response: 'zzz', elapsedMs: 500, timedOut: false, prize: null,
+    });
+    await clear('session-1', ['ka', 'n', 'shi', 'dot']);
+    nowRef.now = DAY1_11AM;
+    await sm.start('mini');
+    await clear('session-2', ['dot'], '🦆');
+    expect(await trophyViews(db.conn)).toHaveLength(0);
+
+    // Day 2: fresh chance — all four are due again and the run seals.
+    nowRef.now = DAY2_NOON;
+    const third = await sm.start('mini');
+    expect(third.trophyEligible).toBe(true);
+    expect(third.queueLength).toBe(4);
+    const r = await clear('session-3', CARDS, '🎁');
+    expect(r?.sessionEnd?.perfect).toBe(true);
+    const trophies = await trophyViews(db.conn);
+    expect(trophies).toHaveLength(1);
+    expect(trophies[0]).toMatchObject({ sessionId: 'session-3', size: 4 });
+  });
+
+  it("a calibration session doesn't consume the day's trophy chance", async () => {
+    const { CalibrationManager } = await import('./calibration');
+    const cal = new CalibrationManager(db.conn, {
+      now: () => DAY1_9AM,
+      rng: noShuffle,
+      uuid: () => 'cal-1',
+    });
+    const c = await cal.start('mini');
+    await cal.submit(c.sessionId, c.trials.map((t) => ({
+      cardId: t.cardId, text: t.text, response: t.text, elapsedMs: 1000,
+    })));
+
+    nowRef.now = DAY1_11AM;
+    const start = await sm.start('mini');
+    expect(start.trophyEligible).toBe(true);
+    const r = await clear('session-1', CARDS);
+    expect(r?.sessionEnd?.perfect).toBe(true);
+    expect(await trophyViews(db.conn)).toHaveLength(1);
+  });
+
+  it('an ineligible session still logs every attempt and moves boxes as before', async () => {
+    // Session 1: everything times out, then every retry clears — all four
+    // cards sit in box 1 and are due again the same day.
+    await sm.start('mini');
+    for (const cardId of CARDS) {
+      await sm.answer('session-1', {
+        cardId, response: '', elapsedMs: 999999, timedOut: true, prize: null,
+      });
+    }
+    await clear('session-1', CARDS, '🦆'); // retries: logged, no box movement
+    for (const id of CARDS) {
+      const st = await getCardState(db.conn, 'mini', id);
+      expect(st).toMatchObject({ box: 1, lifetimeWrong: 1, lifetimeCorrect: 0 });
+    }
+
+    // Session 2, same day (ineligible): dot/n/shi clear, ka times out and is
+    // retried. Leitner and the audit log behave exactly as in session 1.
+    nowRef.now = DAY1_11AM;
+    const second = await sm.start('mini');
+    expect(second.trophyEligible).toBe(false);
+    expect(second.queueLength).toBe(4);
+    await clear('session-2', ['dot'], '🦆');
+    await sm.answer('session-2', {
+      cardId: 'ka', response: '', elapsedMs: 999999, timedOut: true, prize: null,
+    });
+    await clear('session-2', ['n', 'shi'], '🧸');
+    const last = await clear('session-2', ['ka'], '🌵');
+    expect(last?.sessionEnd).toEqual({ perfect: false, jar: ['🦆', null, '🧸', '🧸'] });
+
+    for (const id of ['dot', 'n', 'shi']) {
+      expect(await getCardState(db.conn, 'mini', id)).toMatchObject({
+        box: 2, lifetimeCorrect: 1, lifetimeWrong: 1,
+      });
+    }
+    expect(await getCardState(db.conn, 'mini', 'ka')).toMatchObject({
+      box: 1, lifetimeCorrect: 0, lifetimeWrong: 2,
+    });
+
+    // 8 attempts in session 1 (4 firsts + 4 retries) + 5 in session 2.
+    const all = await attemptRows(db.conn, {});
+    expect(all).toHaveLength(13);
+    expect(all.filter((a) => a.sessionId === 'session-2')).toHaveLength(5);
+    const kaRetry = all.find((a) => a.sessionId === 'session-2' && a.cardId === 'ka' && !a.isFirstOfSession);
+    expect(kaRetry).toMatchObject({ outcome: 'correct', boxBefore: 1, boxAfter: 1 });
+  });
+});
+
 describe('mediaUrlFor', () => {
   it('percent-encodes per segment, keeping the path structure', () => {
     expect(mediaUrlFor('mini/media/dot.svg')).toBe('mem://media/mini/media/dot.svg');

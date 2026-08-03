@@ -59,6 +59,20 @@ interface ActiveSession {
   stateByCard: Map<string, CardStateRow>;
   firstAttempted: Set<string>;
   jar: (string | null)[];
+  /**
+   * False when this deck already had a drill session earlier the same local
+   * day: the run still drills, logs and moves boxes, but can never seal
+   * (DESIGN.md "One trophy chance per day"). Decided ONCE at start from the
+   * same `drilledToday` signal that gates new-card introduction — never
+   * re-derived at end, where this session's own row would always make the
+   * answer false.
+   *
+   * Kept in memory only, deliberately: a session cannot survive a restart
+   * (the queue lives here, and `answer` rejects unknown ids), so an
+   * interrupted session is never sealed anyway — persisting the flag would
+   * add a column and a migration that nothing could read.
+   */
+  trophyEligible: boolean;
   ended: boolean;
 }
 
@@ -123,6 +137,11 @@ export class SessionManager {
     const effectiveSettings = drilledToday
       ? { ...deck.settings, newCardsPerSession: 0 }
       : deck.settings;
+    // One trophy chance per day (DESIGN.md, 2026-08): the SAME day-check
+    // decides whether this run can seal a jar. Reported to the renderer up
+    // front (contract #7) so a practice round is labelled from the start,
+    // never surprised at the end.
+    const trophyEligible = !drilledToday;
 
     const queueCards = buildSessionQueue(states, cards, effectiveSettings, tagFilter, now, this.rng);
 
@@ -139,7 +158,7 @@ export class SessionManager {
       // Nothing due, nothing new: close the row immediately (an empty jar is
       // not a perfect session — nothing was at stake).
       await endSession(this.conn, id, now.getTime(), false, []);
-      return { sessionId: id, queueLength: 0, first: null };
+      return { sessionId: id, queueLength: 0, first: null, trophyEligible };
     }
 
     const s: ActiveSession = {
@@ -152,10 +171,16 @@ export class SessionManager {
       stateByCard: new Map(states.map((st) => [st.cardId, st])),
       firstAttempted: new Set(),
       jar: new Array<string | null>(queueCards.length).fill(null),
+      trophyEligible,
       ended: false,
     };
     this.sessions.set(id, s);
-    return { sessionId: id, queueLength: s.queueLength, first: this.toView(s, s.queue[0]) };
+    return {
+      sessionId: id,
+      queueLength: s.queueLength,
+      first: this.toView(s, s.queue[0]),
+      trophyEligible,
+    };
   }
 
   async answer(sessionId: string, req: AnswerRequest): Promise<AnswerResult> {
@@ -209,7 +234,10 @@ export class SessionManager {
     if (s.queue.length === 0) {
       s.ended = true;
       this.sessions.delete(s.id);
-      const perfect = s.jar.every((x) => x !== null);
+      // A full jar seals only on the day's first drill of this deck; a
+      // practice round ends unsealed however well it went (its jar quietly
+      // empties back into the pit, exactly like an imperfect run).
+      const perfect = s.trophyEligible && s.jar.every((x) => x !== null);
       await endSession(this.conn, s.id, now.getTime(), perfect, s.jar);
       sessionEnd = { perfect, jar: [...s.jar] };
     }
