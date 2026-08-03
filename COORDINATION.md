@@ -80,9 +80,18 @@ requests go in the section below.
 - [ ] Kana hints (coordinator, pending Elena's go-ahead): gen-kana.ts writes
       hints — voiced/semi-voiced systematically (dakuten = base kana, voiced),
       base kana as shape mnemonics for Elena to veto. Regenerate + goldens.
-- [ ] Practice-day streak (pending Elena's global-vs-per-deck call): global
-      consecutive-days counter + ~30-day dot strip in the home header;
-      attendance not perfection; no schema change (attempts.shown_at).
+- [x] B12 [backend]: practice-day attendance (DESIGN.md "Practice streak").
+      `stats.practiceHistory()` (contract #8) + the statsPracticeHistory IPC
+      handler. Global across decks, grouped by LOCAL calendar day from
+      attempts.shown_at with outcome='calibration' excluded, sharing the
+      day-key helper records() uses so the two always agree (DST-safe: day
+      shifts go through the local Date constructor, never ms arithmetic).
+      `days` = the last 30 local days oldest-first INCLUDING zero days (the
+      fixed-width dot strip); `currentStreakDays` counts back from today when
+      today has a drill, else from yesterday, 0 when neither;
+      `longestStreakDays` scans all history, not just the window.
+- [ ] F12 [frontend]: home-header streak line + ~30-day dot strip over
+      stats.practiceHistory(); factual language, no flames/warnings.
 
 ## New milestones (2026-08): arcade drill button + global Hall of Fame
 - [x] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
