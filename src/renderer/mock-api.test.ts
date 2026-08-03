@@ -364,3 +364,32 @@ describe('mock api practice rounds (contract change #7, F11)', () => {
     expect((await api2.session.start('mock-piano')).trophyEligible).toBe(true);
   });
 });
+
+describe('mock api practice history (contract change #8, F12)', () => {
+  it('returns 30 local days oldest-first, gaps included, with figures that match the dots', async () => {
+    const api = createMockApi();
+    const h = await api.stats.practiceHistory();
+
+    expect(h.days).toHaveLength(30);
+    expect(h.days.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.dateIso))).toBe(true);
+    // Oldest first, one calendar day apart, ending today.
+    const asDate = (iso: string) => new Date(`${iso}T00:00:00`).getTime();
+    for (let i = 1; i < h.days.length; i++) {
+      expect(asDate(h.days[i].dateIso) - asDate(h.days[i - 1].dateIso)).toBeGreaterThan(0);
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    expect(asDate(h.days[29].dateIso)).toBe(today.getTime());
+
+    // Deliberate gaps 9, 17 and 18 days back, so the strip shows a break.
+    expect(h.days.filter((d) => d.attempts === 0)).toHaveLength(3);
+    expect(h.days[29 - 9].attempts).toBe(0);
+
+    // The number can't contradict the dots: the run is derived from them.
+    let trailing = 0;
+    for (let i = h.days.length - 1; i >= 0 && h.days[i].attempts > 0; i--) trailing++;
+    expect(h.currentStreakDays).toBe(trailing);
+    expect(h.currentStreakDays).toBe(9);
+    expect(h.longestStreakDays).toBeGreaterThanOrEqual(h.currentStreakDays);
+  });
+});

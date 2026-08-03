@@ -562,10 +562,15 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
         };
       },
 
-      // Contract #8 stub (coordinator): a plausible attendance history so the
-      // home header's streak + dot strip render under start:mock. Deliberate
-      // gap 9 days back, so a broken run is visible in the dots while the
-      // current streak stays healthy. F12 owns the real shape.
+      /**
+       * Contract #8 (F12). A plausible attendance history so the home
+       * header's streak + dot strip render under start:mock: deliberate gaps
+       * 9, 17 and 18 days back, so a BROKEN run is visible in the strip while
+       * the current run stays healthy — the anti-cliff reading is the whole
+       * point of the dots. Deterministic in shape (only the day keys follow
+       * the real clock); the streak figures are DERIVED from the days, so
+       * editing the gaps can't make the number contradict the dots.
+       */
       practiceHistory: async () => {
         const dayMs = 86_400_000;
         const midnight = new Date();
@@ -580,7 +585,17 @@ export function createMockApi(hooks: MockApiHooks = {}): Api {
             attempts: skipped ? 0 : 6 + ((back * 7) % 19),
           };
         });
-        return { currentStreakDays: 9, longestStreakDays: 12, days };
+        // Trailing run = the current streak (the mock always "practised today").
+        let currentStreakDays = 0;
+        for (let i = days.length - 1; i >= 0 && days[i].attempts > 0; i--) currentStreakDays++;
+        // Longest run within the window, floored at a lifetime-ish 12.
+        let run = 0;
+        let longestStreakDays = 12;
+        for (const d of days) {
+          run = d.attempts > 0 ? run + 1 : 0;
+          longestStreakDays = Math.max(longestStreakDays, run);
+        }
+        return { currentStreakDays, longestStreakDays, days };
       },
     },
   };
