@@ -12,6 +12,7 @@ import type {
   DeckStats,
   DeckSummary,
   HallOfFame,
+  PracticeHistory,
   TrophyView,
 } from '../shared/api';
 import { buildSessionQueue } from './leitner';
@@ -205,6 +206,25 @@ function localDayKey(ms: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 
+/** Shifts a local day key by whole calendar days (DST-safe: no ms math). */
+function shiftDayKey(key: string, deltaDays: number): string {
+  const [y, m, d] = key.split('-').map(Number);
+  return localDayKey(new Date(y, m - 1, d + deltaDays).getTime());
+}
+
+/** Local days with at least one drill attempt → attempt count. */
+async function drillDaysByKey(conn: DuckDBConnection): Promise<Map<string, number>> {
+  const rows = await conn.runAndReadAll(
+    `SELECT shown_at FROM attempts WHERE outcome != 'calibration'`,
+  );
+  const perDay = new Map<string, number>();
+  for (const r of rows.getRows()) {
+    const key = localDayKey(timestampToMs(r[0]));
+    perDay.set(key, (perDay.get(key) ?? 0) + 1);
+  }
+  return perDay;
+}
+
 export async function records(conn: DuckDBConnection): Promise<HallOfFame> {
   // Deck scores: every deck, archived included, ranked by sealed jars.
   const deckRows = await conn.runAndReadAll(
@@ -278,14 +298,7 @@ export async function records(conn: DuckDBConnection): Promise<HallOfFame> {
 
   // Local-day aggregates from a light timestamp projection (personal-scale
   // table); day keys computed in JS exactly like B9's local midnight.
-  const tsRows = await conn.runAndReadAll(
-    `SELECT shown_at FROM attempts WHERE outcome != 'calibration'`,
-  );
-  const perDay = new Map<string, number>();
-  for (const r of tsRows.getRows()) {
-    const key = localDayKey(timestampToMs(r[0]));
-    perDay.set(key, (perDay.get(key) ?? 0) + 1);
-  }
+  const perDay = await drillDaysByKey(conn);
   let busiestDay: HallOfFame['busiestDay'] = null;
   for (const [dateIso, attempts] of [...perDay.entries()].sort(([a], [b]) =>
     a.localeCompare(b),
@@ -301,6 +314,56 @@ export async function records(conn: DuckDBConnection): Promise<HallOfFame> {
     largestPerfectSession,
     busiestDay,
     daysPracticed: perDay.size,
-    totalAttempts: tsRows.getRows().length,
+    totalAttempts: [...perDay.values()].reduce((a, b) => a + b, 0),
   };
+}
+
+// ---------------------------------------------------------------------------
+// Practice attendance (contract #8) — DESIGN.md "Practice streak (2026-08)".
+
+/** Width of the home-header dot strip, in local days (today included). */
+const PRACTICE_WINDOW_DAYS = 30;
+
+/**
+ * Global, cross-deck attendance: which local days had any drill attempt.
+ * Global on purpose — Leitner deliberately makes individual decks go quiet,
+ * so a per-deck counter would break because the scheduler said not to
+ * practise. Calibration rows never count (they are typing tests, not drills).
+ */
+export async function practiceHistory(
+  conn: DuckDBConnection,
+  now: Date,
+): Promise<PracticeHistory> {
+  const perDay = await drillDaysByKey(conn);
+
+  // Fixed-width strip: the last 30 local days, oldest first, zero days
+  // included — the anti-cliff device, a gap must stay visible as one dot.
+  const todayKey = localDayKey(now.getTime());
+  const days: PracticeHistory['days'] = [];
+  for (let back = PRACTICE_WINDOW_DAYS - 1; back >= 0; back--) {
+    const dateIso = shiftDayKey(todayKey, -back);
+    days.push({ dateIso, attempts: perDay.get(dateIso) ?? 0 });
+  }
+
+  // Count back from today if today already has a drill, else from yesterday,
+  // so the number doesn't read 0 every morning before practice. 0 when
+  // neither day has one.
+  let cursor = perDay.has(todayKey) ? todayKey : shiftDayKey(todayKey, -1);
+  let currentStreakDays = 0;
+  while (perDay.has(cursor)) {
+    currentStreakDays++;
+    cursor = shiftDayKey(cursor, -1);
+  }
+
+  // Longest run anywhere in history — not just inside the 30-day window.
+  let longestStreakDays = 0;
+  let run = 0;
+  let prev: string | null = null;
+  for (const key of [...perDay.keys()].sort((a, b) => a.localeCompare(b))) {
+    run = prev !== null && shiftDayKey(prev, 1) === key ? run + 1 : 1;
+    prev = key;
+    if (run > longestStreakDays) longestStreakDays = run;
+  }
+
+  return { currentStreakDays, longestStreakDays, days };
 }

@@ -60,7 +60,7 @@ requests go in the section below.
   regenerated. Also FEEDBACK_MS 2800 -> 3300 (+500 ms answer visibility).
 
 ## Queued (2026-08, pre-1.0)
-- [ ] B11 [backend]: one trophy chance per day (DESIGN.md "One trophy chance
+- [x] B11 [backend]: one trophy chance per day (DESIGN.md "One trophy chance
       per day"). sessions.start already computes `drilledToday` via
       hasDrillSessionSince — carry it as the session's trophyEligible; at
       session end only seal (perfect=true + jar persisted) when eligible.
@@ -68,15 +68,30 @@ requests go in the section below.
       SessionStart gains `trophyEligible: boolean` (contract #7, additive).
       Tests: first session of the day seals; a perfect SECOND session the same
       day does not; next local day seals again; calibration doesn't consume it.
+      DONE (2026-08-02): eligibility decided once in `start` from the existing
+      `drilledToday` (no second mechanism), carried on the in-memory session
+      only — a session can't survive a restart (the queue lives in main and
+      `answer` rejects unknown ids), so an interrupted run can never seal and
+      a persisted column would have no reader. `SessionStart.trophyEligible`
+      is returned on both the normal and the empty-queue path.
 - [ ] F11 [frontend]: honour trophyEligible — ghost/outlined jar + quiet
       "practice round — today's jar is already decided" line when false; no
       seal ceremony, no chime; the empty-back-to-pit ending stays as-is.
 - [ ] Kana hints (coordinator, pending Elena's go-ahead): gen-kana.ts writes
       hints — voiced/semi-voiced systematically (dakuten = base kana, voiced),
       base kana as shape mnemonics for Elena to veto. Regenerate + goldens.
-- [ ] Practice-day streak (pending Elena's global-vs-per-deck call): global
-      consecutive-days counter + ~30-day dot strip in the home header;
-      attendance not perfection; no schema change (attempts.shown_at).
+- [x] B12 [backend]: practice-day attendance (DESIGN.md "Practice streak").
+      `stats.practiceHistory()` (contract #8) + the statsPracticeHistory IPC
+      handler. Global across decks, grouped by LOCAL calendar day from
+      attempts.shown_at with outcome='calibration' excluded, sharing the
+      day-key helper records() uses so the two always agree (DST-safe: day
+      shifts go through the local Date constructor, never ms arithmetic).
+      `days` = the last 30 local days oldest-first INCLUDING zero days (the
+      fixed-width dot strip); `currentStreakDays` counts back from today when
+      today has a drill, else from yesterday, 0 when neither;
+      `longestStreakDays` scans all history, not just the window.
+- [ ] F12 [frontend]: home-header streak line + ~30-day dot strip over
+      stats.practiceHistory(); factual language, no flames/warnings.
 
 ## New milestones (2026-08): arcade drill button + global Hall of Fame
 - [x] B10 [backend]: implement stats.records() per contract #6 (HallOfFame in
