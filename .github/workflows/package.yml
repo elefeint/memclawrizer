@@ -61,7 +61,11 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "memclawrizer $GITHUB_REF_NAME" --notes "Installers built by CI. macOS app is unsigned: right-click → Open on first launch. Starter decks (.deckpack) attached — import them from the home screen." || true
+          # Release notes come from CHANGELOG.md's top section when it names
+          # this tag; otherwise a short default.
+          NOTES=$(awk -v tag="${GITHUB_REF_NAME#v}" 'BEGIN{p=0} /^## /{ if(p) exit; if ($2==tag) {p=1; next} } p' CHANGELOG.md)
+          [ -n "$NOTES" ] || NOTES="Installers built by CI. macOS app is unsigned: right-click → Open on first launch. Starter decks (.deckpack) attached — import them from the home screen."
+          gh release create "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --title "memclawrizer $GITHUB_REF_NAME" --notes "$NOTES" || true
           find out/make -type f \( -name '*.deb' -o -name '*.rpm' -o -name '*.exe' -o -name '*.nupkg' -o -name '*.zip' \) -print0 | xargs -0 gh release upload "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" --clobber
           # Starter decks ride along so installer users don't need the repo
           # (Linux job only — identical bytes on every platform).
