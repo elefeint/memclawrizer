@@ -76,6 +76,13 @@ export interface DrillState {
   remaining: number;
   /** Renderer-side view of the jar as it fills; source of truth is main. */
   slots: JarSlot[];
+  /**
+   * False when this deck already drilled today (contract #7): the run is a
+   * practice round and CANNOT seal, however perfect it goes. Known from
+   * START, so the UI can say so up front instead of surprising the user at
+   * the end. Absent on older backends = eligible.
+   */
+  trophyEligible: boolean;
   /** Card being presented / answered / animated about. */
   card: CardView | null;
   /** nowMs of the first TICK after presentation began; null until then. */
@@ -144,6 +151,7 @@ export const initialState: DrillState = {
   queueLength: 0,
   remaining: 0,
   slots: [],
+  trophyEligible: true,
   card: null,
   presentedAtMs: null,
   deadlineMs: null,
@@ -193,6 +201,7 @@ export function reduce(state: DrillState, event: DrillEvent, deps: MachineDeps):
           queueLength: session.queueLength,
           remaining: session.queueLength,
           slots: Array.from({ length: session.queueLength }, () => ({ kind: 'empty' as const })),
+          trophyEligible: session.trophyEligible ?? true,
           card: session.first,
         },
         effects: [{ type: 'startTimer', ms: session.first.timerMs }],
@@ -352,7 +361,10 @@ export function reduce(state: DrillState, event: DrillEvent, deps: MachineDeps):
             // Contract promises sessionEnd exactly when next is null; be safe.
             return { state: { ...state, phase: 'done', card: null }, effects: [] };
           }
-          if (end.perfect) {
+          // The seal is gated on BOTH the backend's verdict and today's
+          // eligibility: in a practice round no seal ceremony and no chime
+          // can fire, even if a backend were to report perfect=true.
+          if (end.perfect && state.trophyEligible) {
             return {
               state: { ...state, phase: 'sealing', card: null },
               effects: [{ type: 'playSealChime' }, { type: 'animateSeal', jar: end.jar }],

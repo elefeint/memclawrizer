@@ -301,3 +301,95 @@ describe('mock api hall-of-fame records (contract change #6, F10)', () => {
     expect(piano?.sealedJars).toBe(9); // perfection is forever
   });
 });
+
+describe('mock api practice rounds (contract change #7, F11)', () => {
+  const clearPiano = async (api: ReturnType<typeof createMockApi>) => {
+    const s = await api.session.start('mock-piano');
+    const r = await api.session.answer(s.sessionId, {
+      cardId: 'treble-c4',
+      response: 'c4',
+      elapsedMs: 900,
+      timedOut: false,
+      prize: '🎁',
+    });
+    return { start: s, end: r.sessionEnd };
+  };
+
+  it('the day’s FIRST drill is eligible and a flawless run seals', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    const trophiesBefore = (await api.stats.trophies()).length;
+
+    const first = await clearPiano(api);
+    expect(first.start.trophyEligible).toBe(true);
+    expect(first.end?.perfect).toBe(true);
+    expect((await api.stats.trophies()).length).toBe(trophiesBefore + 1);
+  });
+
+  it('a SECOND same-day run is a practice round: flawless, but no seal', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    await clearPiano(api);
+    const trophiesAfterFirst = (await api.stats.trophies()).length;
+
+    const second = await clearPiano(api);
+    // Known from the START — the UI must not have to wait for the ending.
+    expect(second.start.trophyEligible).toBe(false);
+    // Every slot filled with a prize, yet the session does not seal…
+    expect(second.end?.jar).toEqual(['🎁']);
+    expect(second.end?.perfect).toBe(false);
+    // …and no trophy is minted (mirrors B11).
+    expect((await api.stats.trophies()).length).toBe(trophiesAfterFirst);
+  });
+
+  it('the next local day opens a fresh chance', async () => {
+    let day = '2026-08-02';
+    const api = createMockApi({ today: () => day });
+    await clearPiano(api);
+    expect((await api.session.start('mock-piano')).trophyEligible).toBe(false);
+
+    day = '2026-08-03';
+    const next = await clearPiano(api);
+    expect(next.start.trophyEligible).toBe(true);
+    expect(next.end?.perfect).toBe(true);
+  });
+
+  it('eligibility is per deck, and calibration does not consume it', async () => {
+    const api = createMockApi({ today: () => '2026-08-02' });
+    await clearPiano(api);
+    // Another deck's first drill of the day is still eligible…
+    expect((await api.session.start('mock-kana')).trophyEligible).toBe(true);
+
+    const api2 = createMockApi({ today: () => '2026-08-02' });
+    const c = await api2.calibration.start('mock-piano');
+    await api2.calibration.abort(c.sessionId);
+    expect((await api2.session.start('mock-piano')).trophyEligible).toBe(true);
+  });
+});
+
+describe('mock api practice history (contract change #8, F12)', () => {
+  it('returns 30 local days oldest-first, gaps included, with figures that match the dots', async () => {
+    const api = createMockApi();
+    const h = await api.stats.practiceHistory();
+
+    expect(h.days).toHaveLength(30);
+    expect(h.days.every((d) => /^\d{4}-\d{2}-\d{2}$/.test(d.dateIso))).toBe(true);
+    // Oldest first, one calendar day apart, ending today.
+    const asDate = (iso: string) => new Date(`${iso}T00:00:00`).getTime();
+    for (let i = 1; i < h.days.length; i++) {
+      expect(asDate(h.days[i].dateIso) - asDate(h.days[i - 1].dateIso)).toBeGreaterThan(0);
+    }
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    expect(asDate(h.days[29].dateIso)).toBe(today.getTime());
+
+    // Deliberate gaps 9, 17 and 18 days back, so the strip shows a break.
+    expect(h.days.filter((d) => d.attempts === 0)).toHaveLength(3);
+    expect(h.days[29 - 9].attempts).toBe(0);
+
+    // The number can't contradict the dots: the run is derived from them.
+    let trailing = 0;
+    for (let i = h.days.length - 1; i >= 0 && h.days[i].attempts > 0; i--) trailing++;
+    expect(h.currentStreakDays).toBe(trailing);
+    expect(h.currentStreakDays).toBe(9);
+    expect(h.longestStreakDays).toBeGreaterThanOrEqual(h.currentStreakDays);
+  });
+});

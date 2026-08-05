@@ -11,6 +11,7 @@ import { TESTIDS } from '../../shared/testids';
 import type { DeckSummary, TrophyView } from '../../shared/api';
 import { ASSETS, svgLayer } from '../svg-assets';
 import { consolidationEvent, deriveShelf, type DeckShelfRow, type DenominationJar } from '../shelf';
+import { localDayKey, streakDots, streakLine, stripTitle } from '../practice-streak';
 import * as audio from '../audio';
 import * as T from '../timings';
 import type { Nav } from './drill';
@@ -70,8 +71,18 @@ export async function mountHome(
   const screen = el('div', 'home', TESTIDS.homeScreen);
 
   const header = el('header', 'home-header');
+  const titleBlock = el('div', 'home-title');
   const h = el('h1');
   h.textContent = 'memclawrizer';
+  // F12: attendance, stated factually, beside a month of day-dots — the
+  // number resets on a missed day but the strip keeps the month visible
+  // (DESIGN.md "Practice streak").
+  const streak = el('div', 'streak');
+  const streakLineEl = el('span', 'streak-line');
+  const streakDotsEl = el('div', 'streak-dots');
+  streakDotsEl.setAttribute('role', 'img');
+  streak.append(streakLineEl, streakDotsEl);
+  titleBlock.append(h, streak);
   const importBtn = el('button', 'import-button', TESTIDS.importButton);
   importBtn.type = 'button';
   importBtn.textContent = 'Import deck…';
@@ -80,7 +91,7 @@ export async function mountHome(
   const hofBtn = button('Hall of Fame', () => nav.hallOfFame(), 'hof-button');
   const headerActions = el('div', 'home-header-actions');
   headerActions.append(hofBtn, importBtn);
-  header.append(h, headerActions);
+  header.append(titleBlock, headerActions);
   screen.appendChild(header);
 
   const status = el('p', 'home-status');
@@ -469,7 +480,24 @@ export async function mountHome(
     }
   }
 
-  await Promise.all([refreshDecks(), refreshShelf()]);
+  async function refreshStreak(): Promise<void> {
+    const history = await api.stats.practiceHistory();
+    streakLineEl.textContent = streakLine(history);
+    const summary = stripTitle(history);
+    streakDotsEl.title = summary;
+    streakDotsEl.setAttribute('aria-label', summary);
+    streakDotsEl.innerHTML = '';
+    const today = localDayKey(new Date());
+    for (const dot of streakDots(history, { todayIso: today, day: fmtDay })) {
+      const d = el('span', 'streak-dot');
+      if (dot.practiced) d.classList.add('on');
+      if (dot.isToday) d.classList.add('today');
+      d.title = dot.label;
+      streakDotsEl.appendChild(d);
+    }
+  }
+
+  await Promise.all([refreshDecks(), refreshShelf(), refreshStreak()]);
 
   return () => {
     if (ceremonyTimer !== undefined) window.clearTimeout(ceremonyTimer);
